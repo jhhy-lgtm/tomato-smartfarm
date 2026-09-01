@@ -1,17 +1,15 @@
-﻿/* Tomato Smart Farm Pro Custom Styles */
-@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap');
+﻿/* Tomato Smart Farm - Custom Styles (White Light Theme & Security) */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
-:root {
-  --primary: #e11d48;
-  --primary-dark: #be123c;
-  --farm-green: #10b981;
-  --farm-green-dark: #059669;
+* {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
+  touch-action: manipulation;
+  background-color: #f8fafc;
+  color: #1e293b;
 }
 
 /* Custom Scrollbar */
@@ -20,50 +18,87 @@ body {
   height: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: #f1f5f9;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.3);
+  background: #cbd5e1;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.5);
+  background: #94a3b8;
 }
 
-/* Interactive touch pulse */
+/* Mobile Safe Bottom for iOS Home Bar */
+.safe-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+}
+
+/* Active Touch Button Press */
 .active-press:active {
   transform: scale(0.97);
-  transition: transform 0.08s ease;
 }
 
-/* Bed card transitions */
+/* Routine Checkbox Transitions */
+.routine-checkbox:checked + div span {
+  text-decoration: line-through;
+  color: #94a3b8;
+}
+
+/* Bed Card Hover Effects */
 .bed-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* PIN Lock Screen Animations */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-10px); }
+  40%, 80% { transform: translateX(10px); }
+}
+
+.shake-animation {
+  animation: shake 0.4s ease-in-out;
+}
+
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid #cbd5e1;
+  background-color: transparent;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.bed-card:hover {
-  transform: translateY(-2px);
+
+.pin-dot.filled {
+  background-color: #e11d48;
+  border-color: #e11d48;
+  transform: scale(1.15);
+  box-shadow: 0 0 10px rgba(225, 29, 72, 0.3);
 }
 
-/* Shimmer animation for pending tasks */
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-.pulse-subtle {
-  animation: pulse-subtle 2.5s infinite ease-in-out;
-}
-
-/* Hide spin buttons in number inputs */
-input[type=number]::-webkit-inner-spin-button, 
-input[type=number]::-webkit-outer-spin-button { 
-  -webkit-appearance: none; 
-  margin: 0; 
-}
-input[type=number] {
-  -moz-appearance: textfield;
+.pin-key-btn {
+  width: 64px;
+  height: 64px;
+  border-radius: 9999px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.12s ease;
+  user-select: none;
 }
 
-/* Safe area for mobile notch and bottom home bar */
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 16px);
+.pin-key-btn:hover {
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.pin-key-btn:active {
+  background-color: #e2e8f0;
+  transform: scale(0.92);
 }
