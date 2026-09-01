@@ -1,0 +1,680 @@
+﻿<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>토마토팜 매니저 - 1,000평 완숙토마토 스마트팜 관리</title>
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#e11d48">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 50: '#fff1f2', 100: '#ffe4e6', 500: '#f43f5e', 600: '#e11d48', 700: '#be123c' },
+            farm: { 50: '#ecfdf5', 500: '#10b981', 600: '#059669', 700: '#047857' }
+          }
+        }
+      }
+    }
+  </script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+  <!-- TOP HEADER (Clean White) -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 shadow-sm">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-rose-400 flex items-center justify-center text-2xl shadow-md shadow-brand-600/20">🍅</div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight" id="headerFarmName">토마토팜 매니저</h1>
+            <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">1,000평 연동온실</span>
+          </div>
+          <p class="text-xs text-slate-500 flex items-center gap-1.5" id="headerSummaryText">
+            <span class="text-brand-600 font-bold" id="headerGrowthStageBadge">DAT 1일차</span>
+            <span class="text-slate-300">•</span>
+            <span>오늘 작업</span> <span class="font-bold text-emerald-600" id="headerRoutineProgress">0/0</span>
+            <span class="text-slate-300">•</span>
+            <span>배액률</span> <span class="font-bold text-slate-700" id="headerDrainRate">-</span>
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <!-- Weather Quick Pill in Header -->
+        <button id="btnHeaderWeatherOpen" class="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl text-xs text-slate-700 transition shadow-sm" title="농업 기상 정보 및 지역 변경">
+          <span id="headerWeatherIcon" class="text-sm">☀️</span>
+          <span id="headerWeatherTemp" class="font-bold text-slate-900">- ℃</span>
+          <span id="headerWeatherSolar" class="hidden sm:inline text-amber-700 text-[11px] font-bold pl-1 border-l border-slate-300">- W/m²</span>
+        </button>
+
+        <div class="flex items-center bg-slate-100 rounded-xl p-1 border border-slate-200">
+          <button id="btnPrevDate" class="p-1.5 hover:bg-white rounded-lg text-slate-600 transition-colors shadow-none hover:shadow-sm" title="이전 날짜"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
+          <div class="relative px-2 flex items-center gap-1 cursor-pointer" id="dateDisplayContainer">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-brand-600"></i>
+            <span id="currentDateDisplay" class="text-xs font-bold text-slate-800">2026. 09. 01</span>
+            <input type="date" id="dateInputHidden" class="absolute inset-0 opacity-0 cursor-pointer">
+          </div>
+          <button id="btnNextDate" class="p-1.5 hover:bg-white rounded-lg text-slate-600 transition-colors shadow-none hover:shadow-sm" title="다음 날짜"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        </div>
+        <button id="btnToday" class="hidden sm:inline-flex px-2.5 py-1.5 text-xs font-bold bg-white hover:bg-slate-100 text-brand-600 border border-slate-200 rounded-xl transition shadow-sm">오늘</button>
+      </div>
+    </div>
+    <!-- Desktop Navigation Bar -->
+    <nav class="hidden md:flex max-w-7xl mx-auto mt-3 pt-2 border-t border-slate-200 items-center justify-between">
+      <div class="flex items-center gap-1 overflow-x-auto" id="desktopNavLinks">
+        <button data-tab="routines" class="nav-tab-btn active px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition bg-brand-600 text-white shadow-sm"><i data-lucide="check-square" class="w-4 h-4"></i> 오늘 할 일</button>
+        <button data-tab="weather" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="cloud-sun" class="w-4 h-4 text-sky-500"></i> 실시간 농업기상</button>
+        <button data-tab="scheduler" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="sprout" class="w-4 h-4 text-emerald-600"></i> 연간 생육 스케줄러</button>
+        <button data-tab="beds" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="grid" class="w-4 h-4 text-purple-600"></i> 베드별 작업 관리</button>
+        <button data-tab="logs" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="flask-conical" class="w-4 h-4 text-sky-600"></i> 양액 & 수확 일지</button>
+        <button data-tab="analytics" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="trending-up" class="w-4 h-4 text-amber-600"></i> 영농 통계 & 분석</button>
+        <button data-tab="settings" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="settings" class="w-4 h-4 text-slate-600"></i> 농장 설정 & 백업</button>
+      </div>
+      <div class="text-xs text-slate-500 font-semibold flex items-center gap-2 flex-shrink-0">
+        <span class="inline-block w-2 h-2 rounded-full bg-sky-500 animate-ping"></span>
+        <span id="headerRegionName" class="text-slate-700">충남 부여</span>
+      </div>
+    </nav>
+  </header>  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 pb-24 md:pb-8">
+    <!-- TAB 1: 오늘 할 일 & 루틴 체크 -->
+    <section id="tab-routines" class="tab-pane active space-y-4">
+      <!-- Weather Alert / Smart Farm Advice Banner (Light Theme) -->
+      <div id="routineWeatherBanner" class="bg-gradient-to-r from-sky-50 to-blue-50/60 border border-sky-200 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl flex-shrink-0 shadow-sm" id="routineWeatherEmoji">☀️</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black text-sky-800" id="routineWeatherTitle">실시간 기상 맞춤 급액·환기 처방</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-200/80 text-sky-900 font-bold border border-sky-300" id="routineWeatherRegion">충남 부여</span>
+            </div>
+            <p class="text-xs text-sky-900 mt-0.5 font-medium" id="routineWeatherAdviceText">현재 맑음(27℃), 일사량 양호. 1회 급액량 유지 및 일사비례 급액 횟수 증량 권장.</p>
+          </div>
+        </div>
+        <button id="btnGoToWeatherTab" class="self-start sm:self-auto text-xs px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+          <span>기상 상세/일사량</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <!-- RDA Growth Stage Alert Banner (Light Theme) -->
+      <div id="routineGrowthBanner" class="bg-gradient-to-r from-emerald-50 to-teal-50/60 border border-emerald-200 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl flex-shrink-0 shadow-sm">🌱</div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black text-emerald-800" id="bannerStageTitle">1~3화방 개화 및 초기 착과기</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-200/80 text-emerald-900 font-bold border border-emerald-300" id="bannerDatText">DAT 25일차</span>
+            </div>
+            <p class="text-xs text-emerald-900 mt-0.5 font-medium" id="bannerStageGuide">농진청 가이드: 호박벌 방사 및 1화방 4과 착과 조절(적과), 초세 균형 유지를 위한 곁순 제거</p>
+          </div>
+        </div>
+        <button id="btnGoToScheduler" class="self-start sm:self-auto text-xs px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-sm transition flex items-center gap-1">
+          <span>생육 가이드 보기</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <!-- Top Overview Card -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-md bg-brand-100 text-brand-700 text-xs font-bold border border-brand-200">완숙토마토 루틴</span>
+              <h2 class="text-lg sm:text-xl font-bold text-slate-900">오늘의 영농 작업 체크</h2>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500" id="routineProgressText">반복 작업을 주기적으로 체크하여 생육 및 양액 균형을 유지하세요.</p>
+          </div>
+          <div class="flex items-center gap-4 bg-slate-50 p-3 rounded-xl border border-slate-200 self-start sm:self-auto">
+            <div class="text-right">
+              <div class="text-xs text-slate-500 font-medium">오늘 달성률</div>
+              <div class="text-2xl font-black text-emerald-600" id="routinePercentDisplay">0%</div>
+            </div>
+            <button id="btnOpenAddRoutine" class="px-3.5 py-2 bg-brand-600 hover:bg-brand-500 active:scale-95 text-white text-xs sm:text-sm font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i><span>루틴 추가</span>
+            </button>
+          </div>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2.5 mt-4 overflow-hidden border border-slate-200">
+          <div id="routineProgressBar" class="bg-gradient-to-r from-brand-500 to-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between gap-2 overflow-x-auto pb-1">
+        <div class="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200 shadow-sm" id="routineFilterGroup">
+          <button data-filter="all" class="routine-filter-btn active px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-white shadow-sm">전체 (<span id="countFilterAll">0</span>)</button>
+          <button data-filter="daily" class="routine-filter-btn px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">☀️ 매일 필수 (<span id="countFilterDaily">0</span>)</button>
+          <button data-filter="weekly" class="routine-filter-btn px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">📅 주간 생육 (<span id="countFilterWeekly">0</span>)</button>
+          <button data-filter="periodic" class="routine-filter-btn px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">🔧 정기 점검/방제 (<span id="countFilterPeriodic">0</span>)</button>
+        </div>
+        <button id="btnResetDayRoutines" class="text-xs text-slate-500 hover:text-rose-600 font-semibold flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:bg-slate-100 transition" title="오늘 체크 초기화">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">오늘 체크 초기화</span>
+        </button>
+      </div>
+      <div id="routineListContainer" class="space-y-2.5"></div>
+    </section>
+
+    <!-- TAB 2: ⛅ 실시간 농업기상 & 처방 (White Light Theme) -->
+    <section id="tab-weather" class="tab-pane hidden space-y-4">
+      <!-- Location & Refresh Card -->
+      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-md bg-sky-100 text-sky-800 text-xs font-bold border border-sky-200">기상청 격자 & 고해상도 일사량 연동</span>
+              <span class="text-xs text-slate-500 font-medium" id="weatherLastUpdatedText">실시간 갱신</span>
+            </div>
+            <h2 class="text-lg sm:text-2xl font-black text-slate-900 mt-1">스마트팜 농업 기상 & 일사량 센터</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">외부 일사량과 온습도 예보를 기반으로 오늘 온실 급액과 환기 제어를 최적화합니다.</p>
+          </div>
+
+          <!-- Region Selector & GPS Button -->
+          <div class="flex items-center gap-2 self-start sm:self-auto">
+            <select id="selectWeatherRegion" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm font-bold text-slate-800 focus:border-sky-500 focus:outline-none">
+              <option value="buyeo">충남 부여군 (완숙토마토 주산지)</option>
+              <option value="gimje">전북 김제시 (스마트팜 혁신밸리)</option>
+              <option value="nonsan">충남 논산시</option>
+              <option value="jinju">경남 진주시</option>
+              <option value="miryang">경남 밀양시 (스마트팜 혁신밸리)</option>
+              <option value="damyang">전남 담양군</option>
+              <option value="goheung">전남 고흥군 (스마트팜 혁신밸리)</option>
+              <option value="hwaseong">경기 화성시</option>
+              <option value="sangju">경북 상주시 (스마트팜 혁신밸리)</option>
+              <option value="chuncheon">강원 춘천시</option>
+            </select>
+            <button id="btnGpsLocation" class="px-3 py-2 bg-sky-50 hover:bg-sky-100 text-sky-700 border border-sky-200 rounded-xl text-xs font-bold transition flex items-center gap-1 shadow-sm" title="스마트폰 GPS 내 위치 찾기">
+              <i data-lucide="map-pin" class="w-4 h-4"></i>
+              <span class="hidden sm:inline">GPS</span>
+            </button>
+            <button id="btnRefreshWeather" class="p-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl shadow-sm transition" title="날씨 즉시 새로고침">
+              <i data-lucide="refresh-cw" class="w-4 h-4" id="weatherRefreshIcon"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- Current Live Weather KPI Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-2">
+          <!-- Temp -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
+            <span class="text-[11px] text-slate-500 block font-semibold">현재 기온</span>
+            <div class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5" id="weatherCurTemp">- ℃</div>
+            <span class="text-[10px] text-slate-500" id="weatherApparentTemp">체감 -℃</span>
+          </div>
+          <!-- Solar Radiation -->
+          <div class="bg-amber-50/80 p-3 rounded-xl border border-amber-200 text-center ring-1 ring-amber-300">
+            <span class="text-[11px] text-amber-800 block font-bold">☀️ 실시간 일사량</span>
+            <div class="text-xl sm:text-2xl font-black text-amber-600 mt-0.5" id="weatherCurSolar">- W/m²</div>
+            <span class="text-[10px] text-amber-800 font-semibold" id="weatherDailySolarSum">누적: - J/cm²</span>
+          </div>
+          <!-- Humidity -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
+            <span class="text-[11px] text-slate-500 block font-semibold">상대 습도</span>
+            <div class="text-xl sm:text-2xl font-black text-sky-600 mt-0.5" id="weatherCurHumidity">-%</div>
+            <span class="text-[10px] text-slate-500">외부 대기</span>
+          </div>
+          <!-- Wind -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
+            <span class="text-[11px] text-slate-500 block font-semibold">풍속</span>
+            <div class="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5" id="weatherCurWind">- m/s</div>
+            <span class="text-[10px] text-slate-500">환기창 영향</span>
+          </div>
+          <!-- Sky Condition -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
+            <span class="text-[11px] text-slate-500 block font-semibold">하늘 상태</span>
+            <div class="text-base sm:text-lg font-bold text-slate-800 mt-1" id="weatherSkyCondition">로딩 중...</div>
+            <span class="text-[10px] text-slate-500 font-medium" id="weatherPrecipProb">강수확률: -%</span>
+          </div>
+          <!-- Day Max / Min -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
+            <span class="text-[11px] text-slate-500 block font-semibold">오늘 최고 / 최저</span>
+            <div class="text-base sm:text-lg font-black text-rose-600 mt-1" id="weatherMaxMinTemp">- / - ℃</div>
+            <span class="text-[10px] text-slate-500 font-medium">일교차 분석</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Smart Farm Weather Advisor Prescription Box -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i> 기상 맞춤형 토마토 급액·환경 처방전
+          </h3>
+          <span class="text-xs text-sky-800 font-bold bg-sky-50 px-2.5 py-0.5 rounded-lg border border-sky-200">농진청 스마트팜 지침</span>
+        </div>
+        <div id="weatherAdvisorCard" class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+          <div class="flex items-start gap-3">
+            <span class="text-2xl" id="advisorStatusIcon">☀️</span>
+            <div class="space-y-1">
+              <h4 class="text-sm font-bold text-slate-900" id="advisorTitle">기상 분석 중...</h4>
+              <p class="text-xs sm:text-sm text-slate-700 leading-relaxed font-medium" id="advisorContent">
+                기상 데이터를 분석하여 완숙토마토에 최적화된 급액 횟수, 공급 EC 및 차광/환기 지침을 도출하고 있습니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hourly Solar Radiation & Temperature Chart -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="sun-medium" class="w-4 h-4 text-amber-500"></i> 시간대별 일사량(W/m²) & 기온(℃) 예보 곡선
+          </h3>
+          <div class="flex items-center gap-3 text-[11px] text-slate-500 font-semibold">
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 일사량(W/m²)</span>
+            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span> 기온(℃)</span>
+          </div>
+        </div>
+        <div class="h-64 relative">
+          <canvas id="chartHourlyWeather"></canvas>
+        </div>
+      </div>
+
+      <!-- 3-Day Daily Forecast Cards -->
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+        <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+          <i data-lucide="calendar" class="w-4 h-4 text-slate-500"></i> 주간 농업 기상 3일 예보
+        </h3>
+        <div id="weatherDailyCardsContainer" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
+      </div>
+    </section>    <!-- TAB 3: 🌱 연간 생육 스케줄러 (농진청 표준 - Light Theme) -->
+    <section id="tab-scheduler" class="tab-pane hidden space-y-4">
+      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200">농촌진흥청(RDA) 표준 매뉴얼 연동</span>
+              <span class="text-xs text-slate-500 font-medium">완숙토마토 스마트팜</span>
+            </div>
+            <h2 class="text-lg sm:text-2xl font-black text-slate-900 mt-1">연간 토마토 생육 주기 스케줄러</h2>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">정식일자를 설정하면 7단계 생육 주기와 농진청 권장 환경·양액 가이드가 자동 연동됩니다.</p>
+          </div>
+          <div class="bg-emerald-50/60 p-3.5 sm:p-4 rounded-xl border border-emerald-200 flex items-center gap-5 self-start lg:self-auto shadow-sm">
+            <div class="border-r border-emerald-200 pr-5">
+              <div class="text-[11px] text-emerald-800 font-semibold">정식 후 경과일 (DAT)</div>
+              <div class="text-2xl sm:text-3xl font-black text-emerald-700" id="displayDatCount">DAT 1일</div>
+            </div>
+            <div>
+              <div class="text-[11px] text-emerald-800 font-semibold">현재 생육 단계</div>
+              <div class="text-sm sm:text-base font-black text-slate-900" id="displayCurrentStageName">1단계: 정식 및 활착기</div>
+            </div>
+          </div>
+        </div>
+        <div class="pt-3 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">🌱 정식 일자 (Transplanting Date)</label>
+            <input type="date" id="inputPlantingDate" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 focus:border-emerald-500 focus:outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-700 mb-1">🌾 재배 작형 선택</label>
+            <select id="selectCropType" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-800 focus:border-emerald-500 focus:outline-none font-bold">
+              <option value="long_term">🍅 장기 수경재배 (8~9월 정식 ~ 익년 6월 종료 / 스마트팜 표준)</option>
+              <option value="spring">🍅 봄 작형 반촉성 (1~2월 정식 ~ 7월 종료)</option>
+              <option value="autumn">🍅 가을 작형 억제 (7~8월 정식 ~ 12월 종료)</option>
+            </select>
+          </div>
+          <div>
+            <button id="btnApplyPlantingDate" class="w-full px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
+              <i data-lucide="check" class="w-4 h-4"></i>
+              <span>정식일 적용 & 스케줄 자동계산</span>
+            </button>
+          </div>
+        </div>
+        <div class="space-y-1.5 pt-1">
+          <div class="flex justify-between text-xs text-slate-500 font-medium">
+            <span>연간 작기 진행률</span>
+            <span class="font-bold text-emerald-700" id="displayCyclePercent">0% (총 285일 중 1일)</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden border border-slate-200">
+            <div id="cycleProgressBar" class="bg-gradient-to-r from-emerald-500 via-sky-500 to-brand-500 h-full rounded-full transition-all duration-500" style="width: 1%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="calendar-range" class="w-4 h-4 text-emerald-600"></i> 농진청 완숙토마토 7단계 생육 로드맵 & 표준 지침
+          </h3>
+          <span class="text-xs text-slate-500 font-medium">💡 녹색 카드가 현재 진행 중인 단계입니다</span>
+        </div>
+        <div id="rdaStagesContainer" class="space-y-3.5"></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: 연동온실 베드별 작업 관리 (Light Theme) -->
+    <section id="tab-beds" class="tab-pane hidden space-y-4">
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200">1,000평 베드 매트릭스</span>
+              <h2 class="text-lg sm:text-xl font-bold text-slate-900">베드별 생육 작업 현황</h2>
+            </div>
+            <p class="text-xs sm:text-sm text-slate-500 mt-1">현재 온실 내 <span class="font-bold text-brand-600" id="bedTotalCountText">24개</span> 베드의 작업 진행 상황을 직관적으로 확인하고 기록합니다.</p>
+          </div>
+          <div class="flex items-center gap-3 bg-slate-50 p-2.5 px-4 rounded-xl border border-slate-200 self-start sm:self-auto">
+            <div class="text-xs text-slate-500 font-medium">선택 작업 완료율</div>
+            <div class="text-lg font-black text-emerald-600" id="bedTaskCompletionDisplay">0 / 24 (0%)</div>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-2">관리할 작업 선택:</label>
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-2" id="bedTaskTypeSelector">
+            <button data-task="suckering" class="bed-task-type-btn active p-2.5 rounded-xl border border-brand-500 bg-brand-600 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition"><span>✂️ 곁순제거&유인</span></button>
+            <button data-task="defoliation" class="bed-task-type-btn p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition"><span>🍃 적엽(하엽)</span></button>
+            <button data-task="thinning" class="bed-task-type-btn p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition"><span>🎯 적과(착과조절)</span></button>
+            <button data-task="harvest" class="bed-task-type-btn p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition"><span>🍅 완숙과 수확</span></button>
+            <button data-task="dripper" class="bed-task-type-btn p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition"><span>💧 점적·배액 점검</span></button>
+          </div>
+        </div>
+        <div class="pt-3 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5 flex-wrap">
+            <span class="text-xs text-slate-500 font-bold">구역 빠른 선택:</span>
+            <button id="btnSelectZone1" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg border border-slate-200 transition">1~6번</button>
+            <button id="btnSelectZone2" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg border border-slate-200 transition">7~12번</button>
+            <button id="btnSelectZone3" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg border border-slate-200 transition">13~18번</button>
+            <button id="btnSelectZone4" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg border border-slate-200 transition">19~24번</button>
+            <button id="btnSelectAllBeds" class="px-2.5 py-1 text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-lg border border-slate-200 transition">전체</button>
+            <button id="btnClearBedSelection" class="px-2.5 py-1 text-xs text-slate-500 hover:text-slate-900 transition font-medium">선택해제</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-emerald-700 font-bold" id="selectedBedCountText">선택 0개</span>
+            <button id="btnBatchCompleteBeds" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition active-press" disabled>
+              <i data-lucide="check" class="w-3.5 h-3.5"></i><span>선택 베드 오늘 완료</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center justify-between text-xs text-slate-500 px-1 font-medium">
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> 완료</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> 진행중</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-slate-300 inline-block"></span> 미작업</span>
+          <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-rose-500 inline-block animate-pulse"></span> 7일 이상 지연</span>
+        </div>
+        <span class="text-slate-400 text-[11px]">💡 베드 카드를 누르면 상태가 즉시 변경됩니다</span>
+      </div>
+      <div id="bedGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
+    </section>
+
+    <!-- TAB 5: 양액 & 수확 일일 대시보드 (Light Theme) -->
+    <section id="tab-logs" class="tab-pane hidden space-y-4">
+      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 text-xs font-bold border border-sky-200">일일 영농 데이터</span>
+              <h2 class="text-lg sm:text-xl font-bold text-slate-900">양액·환경 및 수확량 기록</h2>
+            </div>
+            <p class="text-xs text-slate-500 mt-0.5">선택한 날짜(<span class="text-slate-800 font-bold" id="formCurrentDate">2026-09-01</span>)의 측정값과 수확량을 기록합니다.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <!-- 1-Click Auto Fill Weather Data Button -->
+            <button id="btnAutoFillWeather" class="px-3.5 py-2.5 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition shadow-sm" title="현재 지역의 최고/최저기온, 습도, 일사량을 일지에 자동 입력">
+              <i data-lucide="sparkles" class="w-4 h-4 text-sky-600"></i>
+              <span>⛅ 오늘 날씨 자동 입력</span>
+            </button>
+            <button id="btnSaveDailyLog" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-500 active-press text-white text-sm font-bold rounded-xl shadow-sm flex items-center justify-center gap-2 transition">
+              <i data-lucide="save" class="w-4 h-4"></i><span>오늘 일지 저장</span>
+            </button>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="droplets" class="w-4 h-4 text-sky-600"></i> 양액 공급 & 배액 측정 (EC / pH / 배액률)</h3>
+            <span class="text-xs text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg border border-slate-200 font-semibold">목표 EC: 2.2~2.6 | pH: 5.5~6.2</span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-800">전기전도도 (EC, dS/m)</span><span class="text-[10px] text-sky-800 bg-sky-100 font-bold px-1.5 py-0.5 rounded border border-sky-200">농도</span></div>
+              <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">공급 EC</label><input type="number" step="0.1" id="inputSupplyEc" placeholder="2.4" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 focus:border-sky-500 focus:outline-none"></div>
+                <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">배액 EC</label><input type="number" step="0.1" id="inputDrainEc" placeholder="3.0" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 focus:border-sky-500 focus:outline-none"></div>
+              </div>
+              <div class="text-[11px] text-slate-600 font-medium flex justify-between"><span>EC 편차: <span id="displayEcDiff" class="font-bold text-slate-900">-</span></span><span id="badgeEcStatus" class="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-bold">대기</span></div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-800">산도 (pH)</span><span class="text-[10px] text-emerald-800 bg-emerald-100 font-bold px-1.5 py-0.5 rounded border border-emerald-200">산도</span></div>
+              <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">공급 pH</label><input type="number" step="0.1" id="inputSupplyPh" placeholder="5.8" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 focus:border-emerald-500 focus:outline-none"></div>
+                <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">배액 pH</label><input type="number" step="0.1" id="inputDrainPh" placeholder="6.2" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 focus:border-emerald-500 focus:outline-none"></div>
+              </div>
+              <div class="text-[11px] text-slate-600 font-medium flex justify-between"><span>pH 편차: <span id="displayPhDiff" class="font-bold text-slate-900">-</span></span><span id="badgePhStatus" class="text-[10px] px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-bold">대기</span></div>
+            </div>
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+              <div class="flex items-center justify-between"><span class="text-xs font-bold text-slate-800">급액·배액량 & 배액률 (%)</span><span class="text-[10px] text-brand-800 bg-brand-100 font-bold px-1.5 py-0.5 rounded border border-brand-200">자동계산</span></div>
+              <div class="grid grid-cols-2 gap-2">
+                <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">급액량 (L)</label><input type="number" step="10" id="inputSupplyVolume" placeholder="1500" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 focus:border-brand-500 focus:outline-none"></div>
+                <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">배액량 (L)</label><input type="number" step="5" id="inputDrainVolume" placeholder="375" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold text-slate-900 focus:border-brand-500 focus:outline-none"></div>
+              </div>
+              <div class="p-2 rounded-lg bg-white border border-slate-200 flex items-center justify-between">
+                <span class="text-xs text-slate-600 font-semibold">계산된 배액률:</span>
+                <div class="flex items-center gap-2">
+                  <span id="displayDrainRate" class="text-base font-black text-slate-500">- %</span>
+                  <span id="badgeDrainRateStatus" class="text-[10px] px-1.5 py-0.5 rounded font-bold bg-slate-100 text-slate-600">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-4 pt-2 border-t border-slate-200">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="boxes" class="w-4 h-4 text-brand-600"></i> 완숙토마토 수확량 계량</h3>
+            <span class="text-xs text-brand-700 font-black" id="displayTotalHarvestKg">총 수확: 0 kg</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div class="flex items-center justify-between mb-1.5"><label class="text-xs font-bold text-slate-800">🍅 특품 완숙과 (5kg 상자)</label><span class="text-[10px] text-brand-700 font-bold">정품</span></div>
+              <div class="flex items-center gap-2"><input type="number" min="0" id="inputHarvestGradeA" placeholder="0" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-base font-bold text-slate-900 focus:border-brand-500 focus:outline-none"><span class="text-xs text-slate-600 font-semibold">상자</span></div>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div class="flex items-center justify-between mb-1.5"><label class="text-xs font-bold text-slate-800">🍅 보통 완숙과 (5kg 상자)</label><span class="text-[10px] text-amber-700 font-bold">일반</span></div>
+              <div class="flex items-center gap-2"><input type="number" min="0" id="inputHarvestGradeB" placeholder="0" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-base font-bold text-slate-900 focus:border-brand-500 focus:outline-none"><span class="text-xs text-slate-600 font-semibold">상자</span></div>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div class="flex items-center justify-between mb-1.5"><label class="text-xs font-bold text-slate-800">⚠️ 비상품과/파과 (kg)</label><span class="text-[10px] text-rose-700 font-bold">가공/폐기</span></div>
+              <div class="flex items-center gap-2"><input type="number" min="0" step="0.5" id="inputHarvestGradeC" placeholder="0" class="w-full bg-white border border-slate-300 rounded-lg px-3 py-2 text-base font-bold text-slate-900 focus:border-brand-500 focus:outline-none"><span class="text-xs text-slate-600 font-semibold">kg</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-4 pt-2 border-t border-slate-200">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="sun" class="w-4 h-4 text-amber-500"></i> 온실 환경 & 현장 특이사항 / 사진</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">주간 최고 기온 (°C)</label><input type="number" step="0.5" id="inputTempHigh" placeholder="28.5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"></div>
+            <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">야간 최저 기온 (°C)</label><input type="number" step="0.5" id="inputTempLow" placeholder="16.0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"></div>
+            <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">평균 습도 (%)</label><input type="number" step="1" id="inputHumidity" placeholder="75" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"></div>
+            <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">누적 일사량 (J/cm²)</label><input type="number" step="10" id="inputSolarRadiation" placeholder="1450" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"></div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">병해충 예찰 및 영농 특이사항 메모</label>
+              <textarea id="inputDailyMemo" rows="3" placeholder="예: 3번 베드 끝부분 온실가루이 미세 발생. 내일 친환경 약제 국소 방제 예정. 1화방 완숙도 양호." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:border-brand-500 resize-none"></textarea>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">현장 사진 첨부 (병충해, 작황 등)</label>
+              <div class="flex items-center gap-3">
+                <label class="cursor-pointer flex-1 border-2 border-dashed border-slate-300 hover:border-brand-500 rounded-xl p-3 flex flex-col items-center justify-center text-center transition bg-slate-50">
+                  <i data-lucide="camera" class="w-5 h-5 text-slate-500 mb-1"></i>
+                  <span class="text-xs text-slate-700 font-semibold">사진 촬영 또는 파일 선택</span>
+                  <input type="file" id="inputPhotoFile" accept="image/*" class="hidden">
+                </label>
+                <div id="photoPreviewBox" class="hidden relative w-20 h-20 rounded-xl overflow-hidden border border-slate-300 bg-slate-50 flex-shrink-0">
+                  <img id="photoPreviewImg" src="" alt="미리보기" class="w-full h-full object-cover">
+                  <button id="btnRemovePhoto" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full p-1 shadow"><i data-lucide="x" class="w-3 h-3"></i></button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="space-y-3">
+        <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="history" class="w-4 h-4 text-slate-600"></i> 최근 일일 영농일지 기록</h3>
+        <div id="logHistoryListContainer" class="space-y-2.5"></div>
+      </div>
+    </section>    <!-- TAB 6: 영농 통계 & 분석 차트 (Light Theme) -->
+    <section id="tab-analytics" class="tab-pane hidden space-y-4">
+      <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 text-xs font-bold border border-amber-200">데이터 인사이트</span>
+            <h2 class="text-lg sm:text-xl font-bold text-slate-900">생육 및 양액 통계 분석</h2>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">양액 공급/배액 추이와 수확량 변화를 시각화하여 최적의 관리 방안을 도출합니다.</p>
+        </div>
+        <div class="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200" id="analyticsRangeGroup">
+          <button data-range="7" class="analytics-range-btn active px-3 py-1.5 text-xs font-bold rounded-lg bg-white text-slate-900 shadow-sm">최근 7일</button>
+          <button data-range="14" class="analytics-range-btn px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">14일</button>
+          <button data-range="30" class="analytics-range-btn px-3 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">30일</button>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500 font-semibold">기간 총 수확량</div>
+          <div class="text-xl font-black text-brand-600 mt-1" id="kpiTotalHarvest">0 kg</div>
+          <div class="text-[10px] text-slate-400 mt-0.5 font-medium">완숙 특과/보통과 합산</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500 font-semibold">평균 배액률</div>
+          <div class="text-xl font-black text-emerald-600 mt-1" id="kpiAvgDrainRate">0%</div>
+          <div class="text-[10px] text-slate-400 mt-0.5 font-medium">적정 목표: 20~30%</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500 font-semibold">평균 공급 EC</div>
+          <div class="text-xl font-black text-sky-600 mt-1" id="kpiAvgSupplyEc">0.0</div>
+          <div class="text-[10px] text-slate-400 mt-0.5 font-medium">dS/m</div>
+        </div>
+        <div class="bg-white p-3.5 rounded-xl border border-slate-200 shadow-sm">
+          <div class="text-xs text-slate-500 font-semibold">루틴 평균 달성률</div>
+          <div class="text-xl font-black text-purple-600 mt-1" id="kpiAvgRoutineRate">0%</div>
+          <div class="text-[10px] text-slate-400 mt-0.5 font-medium">일일 체크 완료율</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span> 공급 EC vs 배액 EC 추이 (dS/m)</h3>
+            <span class="text-[11px] text-slate-500 font-bold">EC</span>
+          </div>
+          <div class="h-64 relative"><canvas id="chartEcTrends"></canvas></div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 공급 pH vs 배액 pH 추이</h3>
+            <span class="text-[11px] text-slate-500 font-bold">pH</span>
+          </div>
+          <div class="h-64 relative"><canvas id="chartPhTrends"></canvas></div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 일일 배액률 변화 (%)</h3>
+            <span class="text-[11px] text-emerald-700 font-bold">적정 범위(20~30%)</span>
+          </div>
+          <div class="h-64 relative"><canvas id="chartDrainRateTrends"></canvas></div>
+        </div>
+        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-brand-500"></span> 일자별 수확량 (kg)</h3>
+            <span class="text-[11px] text-slate-500 font-bold">수확량</span>
+          </div>
+          <div class="h-64 relative"><canvas id="chartHarvestTrends"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 7: 농장 설정 & 데이터 백업 (Light Theme) -->
+    <section id="tab-settings" class="tab-pane hidden space-y-4">
+      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+        <div>
+          <div class="flex items-center gap-2"><span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">환경설정</span><h2 class="text-lg sm:text-xl font-bold text-slate-900">온실 설정 & 데이터 백업/내보내기</h2></div>
+          <p class="text-xs sm:text-sm text-slate-500 mt-1">1,000평 온실 구조에 맞게 베드 수를 조정하고 데이터를 안전하게 백업하세요.</p>
+        </div>
+        <div class="space-y-4 pt-2 border-t border-slate-200">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="layout-grid" class="w-4 h-4 text-emerald-600"></i> 온실 베드 구조 설정</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><label class="block text-xs font-bold text-slate-700 mb-1">농장 이름 / 온실 명칭</label><input type="text" id="settingFarmName" value="토마토 스마트팜" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-semibold focus:border-brand-500 focus:outline-none"></div>
+            <div><label class="block text-xs font-bold text-slate-700 mb-1">총 베드 개수 (연동온실 내 라인 수)</label><div class="flex items-center gap-2"><input type="number" min="4" max="100" id="settingBedCount" value="24" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 focus:border-brand-500 focus:outline-none"><span class="text-xs text-slate-500 font-bold flex-shrink-0">개 베드</span></div></div>
+          </div>
+          <button id="btnSaveFarmSettings" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-sm">온실 설정 저장 적용</button>
+        </div>
+        <div class="space-y-4 pt-2 border-t border-slate-200">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="target" class="w-4 h-4 text-sky-600"></i> 표준 양액 목표치 설정</h3>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">목표 공급 EC (dS/m)</label><input type="number" step="0.1" id="settingTargetSupplyEc" value="2.4" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 font-bold"></div>
+            <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">목표 공급 pH</label><input type="number" step="0.1" id="settingTargetSupplyPh" value="5.8" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 font-bold"></div>
+            <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">최소 배액률 (%)</label><input type="number" step="1" id="settingTargetDrainMin" value="20" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 font-bold"></div>
+            <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">최대 배액률 (%)</label><input type="number" step="1" id="settingTargetDrainMax" value="30" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 font-bold"></div>
+          </div>
+        </div>
+        <div class="space-y-4 pt-2 border-t border-slate-200">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="file-spreadsheet" class="w-4 h-4 text-brand-600"></i> 데이터 백업 및 엑셀(CSV) 내보내기</h3>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button id="btnExportCsv" class="p-3.5 rounded-xl bg-slate-50 hover:bg-emerald-50/60 border border-slate-200 hover:border-emerald-300 flex items-center gap-3 text-left transition group shadow-sm">
+              <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition"><i data-lucide="download" class="w-5 h-5"></i></div>
+              <div><div class="text-xs font-bold text-slate-900">엑셀(CSV) 다운로드</div><div class="text-[11px] text-slate-500">일일 양액 및 수확 일지 출력</div></div>
+            </button>
+            <button id="btnExportJson" class="p-3.5 rounded-xl bg-slate-50 hover:bg-sky-50/60 border border-slate-200 hover:border-sky-300 flex items-center gap-3 text-left transition group shadow-sm">
+              <div class="w-10 h-10 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition"><i data-lucide="save" class="w-5 h-5"></i></div>
+              <div><div class="text-xs font-bold text-slate-900">전체 백업 (JSON)</div><div class="text-[11px] text-slate-500">설정 및 모든 기록 파일 저장</div></div>
+            </button>
+            <label class="cursor-pointer p-3.5 rounded-xl bg-slate-50 hover:bg-indigo-50/60 border border-slate-200 hover:border-indigo-300 flex items-center gap-3 text-left transition group shadow-sm">
+              <div class="w-10 h-10 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition"><i data-lucide="upload" class="w-5 h-5"></i></div>
+              <div><div class="text-xs font-bold text-slate-900">백업 복원 (JSON)</div><div class="text-[11px] text-slate-500">이전 백업 파일 불러오기</div></div>
+              <input type="file" id="inputImportJson" accept=".json" class="hidden">
+            </label>
+          </div>
+        </div>
+        <div class="space-y-3 pt-2 border-t border-slate-200">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-slate-500 font-semibold">테스트 데이터 관리</span>
+            <div class="flex items-center gap-2">
+              <button id="btnLoadSampleData" class="text-xs px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg border border-slate-200 transition shadow-sm">최근 7일 샘플 데이터 채우기</button>
+              <button id="btnResetAllData" class="text-xs px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg border border-rose-200 transition shadow-sm">전체 초기화</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <!-- Mobile 7-Tab Navigation (Light Theme) -->
+  <nav class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-lg border-t border-slate-200 px-1 py-1 safe-bottom shadow-lg">
+    <div class="grid grid-cols-7 gap-0.5" id="mobileNavLinks">
+      <button data-tab="routines" class="mobile-nav-btn active flex flex-col items-center justify-center py-1.5 rounded-xl text-brand-600 font-bold transition"><i data-lucide="check-square" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">루틴</span></button>
+      <button data-tab="weather" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="cloud-sun" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">날씨</span></button>
+      <button data-tab="scheduler" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="sprout" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">스케줄</span></button>
+      <button data-tab="beds" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="grid" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">베드</span></button>
+      <button data-tab="logs" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="flask-conical" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">양액</span></button>
+      <button data-tab="analytics" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="trending-up" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">통계</span></button>
+      <button data-tab="settings" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="settings" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">설정</span></button>
+    </div>
+  </nav>
+  <!-- Modal: Add Routine -->
+  <div id="modalAddRoutine" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white border border-slate-200 w-full max-w-md rounded-2xl p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+        <h3 class="text-base font-bold text-slate-900 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5 text-brand-600"></i> 새 루틴 작업 추가</h3>
+        <button id="btnCloseAddRoutine" class="text-slate-400 hover:text-slate-700 p-1 rounded-lg"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="space-y-3">
+        <div><label class="block text-xs font-bold text-slate-700 mb-1">작업 이름 *</label><input type="text" id="inputNewRoutineTitle" placeholder="예: 양액기 점적단추 수압 점검" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-semibold focus:border-brand-500 focus:outline-none"></div>
+        <div><label class="block text-xs font-bold text-slate-700 mb-1">카테고리 *</label><select id="inputNewRoutineCategory" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-semibold focus:border-brand-500 focus:outline-none"><option value="daily">☀️ 매일 필수 루틴</option><option value="weekly">📅 주간 생육 관리</option><option value="periodic">🔧 정기 설비 점검 및 방제</option></select></div>
+        <div><label class="block text-xs font-bold text-slate-700 mb-1">주기 (일수)</label><div class="flex items-center gap-2"><input type="number" id="inputNewRoutineInterval" value="1" min="1" max="90" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-bold focus:border-brand-500 focus:outline-none"><span class="text-xs text-slate-500 font-semibold flex-shrink-0">일마다 반복</span></div></div>
+        <div><label class="block text-xs font-bold text-slate-700 mb-1">작업 가이드 & 주의사항 (선택)</label><textarea id="inputNewRoutineGuide" rows="2" placeholder="작업 방법이나 유의할 점을 적어두면 체크리스트에서 확인할 수 있습니다." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-3 text-xs text-slate-900 focus:border-brand-500 focus:outline-none resize-none"></textarea></div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+        <button id="btnCancelAddRoutine" class="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-900 rounded-xl">취소</button>
+        <button id="btnSubmitAddRoutine" class="px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-sm transition">루틴 등록하기</button>
+      </div>
+    </div>
+  </div>
+  <div id="toastContainer" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
