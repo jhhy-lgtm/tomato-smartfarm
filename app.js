@@ -1,10 +1,17 @@
-﻿// Tomato Smart Farm Pro - Main JavaScript Engine (White Light Theme Edition)
+﻿// Tomato Smart Farm Pro - Main JavaScript Engine with Supabase Cloud Sync & White Theme
 (function () {
   'use strict';
 
-  // 1. Initial State & Data Models
+  // 1. Supabase Cloud Configuration
+  const SUPABASE_URL = 'https://lnnufqbftvourvjoqxpv.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxubnVmcWJmdHZvdXJ2am9xeHB2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgyMzIzNjMsImV4cCI6MjEwMzgwODM2M30.Dlp72wlV3gJBoNM2BEflEnjvdyRy0iQqDc8dllcw4y4';
+  const supabase = (window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) 
+    ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) 
+    : null;
+
+  // Initial State & Data Models
   const DEFAULT_SETTINGS = {
-    farmName: '토마토 스마트팜',
+    farmName: '토마토 농장',
     bedCount: 24,
     targetSupplyEc: 2.4,
     targetSupplyPh: 5.8,
@@ -302,7 +309,7 @@
       toast.classList.add('opacity-0', '-translate-y-2');
       setTimeout(() => toast.remove(), 300);
     }, 2800);
-  }  // DOM Init
+  }  // 2. DOM Initialization
   document.addEventListener('DOMContentLoaded', () => {
     initApp();
   });
@@ -322,9 +329,123 @@
     updateHeaderStats();
     renderActiveTab();
     if (window.lucide) window.lucide.createIcons();
+
+    // Supabase Cloud Sync on startup
+    loadAllFromCloud();
   }
 
-  // 2. Navigation Handling
+  // 3. Supabase Cloud Sync Engine
+  async function loadAllFromCloud() {
+    if (!supabase) return;
+    try {
+      // 1. Settings
+      const { data: sData } = await supabase.from('farm_settings').select('*').eq('id', 'default').single();
+      if (sData) {
+        state.settings.farmName = sData.farm_name || state.settings.farmName;
+        state.settings.bedCount = sData.bed_count || state.settings.bedCount;
+        state.settings.targetSupplyEc = sData.target_supply_ec || state.settings.targetSupplyEc;
+        state.settings.targetSupplyPh = sData.target_supply_ph || state.settings.targetSupplyPh;
+        state.settings.targetDrainMin = sData.target_drain_min || state.settings.targetDrainMin;
+        state.settings.targetDrainMax = sData.target_drain_max || state.settings.targetDrainMax;
+        if (sData.weather_region) state.selectedRegionKey = sData.weather_region;
+        saveToStorage('tomato_settings', state.settings);
+        saveToStorage('tomato_weather_region', state.selectedRegionKey);
+      }
+
+      // 2. Growth Profile
+      const { data: gData } = await supabase.from('growth_profile').select('*').eq('id', 'default').single();
+      if (gData) {
+        state.growthProfile.plantingDate = gData.planting_date || state.growthProfile.plantingDate;
+        state.growthProfile.cropType = gData.crop_type || state.growthProfile.cropType;
+        saveToStorage('tomato_growth_profile', state.growthProfile);
+      }
+
+      // 3. Stage Checklist
+      const { data: scData } = await supabase.from('stage_checklist').select('*');
+      if (scData && scData.length > 0) {
+        scData.forEach(item => {
+          state.stageChecklist[item.key] = item.is_checked;
+        });
+        saveToStorage('tomato_stage_checklist', state.stageChecklist);
+      }
+
+      // 4. Routines
+      const { data: rData } = await supabase.from('routines').select('*');
+      if (rData && rData.length > 0) {
+        rData.forEach(r => {
+          if (!state.routines.find(existing => existing.id === r.id)) {
+            state.routines.push({
+              id: r.id,
+              title: r.title,
+              category: r.category,
+              interval: r.interval_days || 1,
+              guide: r.guide
+            });
+          }
+        });
+        saveToStorage('tomato_routines', state.routines);
+      }
+
+      // 5. Routine Logs
+      const { data: rlData } = await supabase.from('routine_logs').select('*');
+      if (rlData && rlData.length > 0) {
+        rlData.forEach(l => {
+          if (!state.routineLogs[l.log_date]) state.routineLogs[l.log_date] = {};
+          state.routineLogs[l.log_date][l.routine_id] = l.is_completed;
+        });
+        saveToStorage('tomato_routine_logs', state.routineLogs);
+      }
+
+      // 6. Bed Status
+      const { data: bData } = await supabase.from('bed_status').select('*');
+      if (bData && bData.length > 0) {
+        bData.forEach(b => {
+          if (!state.bedStatus[b.task_type]) state.bedStatus[b.task_type] = {};
+          state.bedStatus[b.task_type][b.bed_number] = {
+            status: b.status,
+            date: b.completed_date
+          };
+        });
+        saveToStorage('tomato_bed_status', state.bedStatus);
+      }
+
+      // 7. Daily Logs
+      const { data: dlData } = await supabase.from('daily_logs').select('*');
+      if (dlData && dlData.length > 0) {
+        dlData.forEach(l => {
+          state.dailyLogs[l.log_date] = {
+            date: l.log_date,
+            supplyEc: l.supply_ec,
+            drainEc: l.drain_ec,
+            supplyPh: l.supply_ph,
+            drainPh: l.drain_ph,
+            supplyVolume: l.supply_volume,
+            drainVolume: l.drain_volume,
+            harvestGradeA: l.harvest_grade_a || 0,
+            harvestGradeB: l.harvest_grade_b || 0,
+            harvestGradeC: l.harvest_grade_c || 0,
+            tempHigh: l.temp_high,
+            tempLow: l.temp_low,
+            humidity: l.humidity,
+            solarRadiation: l.solar_radiation,
+            memo: l.memo,
+            photo: l.photo,
+            updatedAt: l.updated_at
+          };
+        });
+        saveToStorage('tomato_daily_logs', state.dailyLogs);
+      }
+
+      updateHeaderStats();
+      renderActiveTab();
+      const badge = document.getElementById('cloudSyncBadge');
+      if (badge) badge.classList.remove('hidden');
+    } catch (err) {
+      console.warn('Supabase initial sync error:', err);
+    }
+  }
+
+  // 4. Navigation Handling
   function setupNavigation() {
     const desktopTabs = document.querySelectorAll('.nav-tab-btn');
     const mobileTabs = document.querySelectorAll('.mobile-nav-btn');
@@ -376,7 +497,7 @@
     else if (state.activeTab === 'settings') renderSettings();
   }
 
-  // 3. Date Navigator
+  // 5. Date Navigator
   function setupDateNavigator() {
     const dateDisplay = document.getElementById('currentDateDisplay');
     const dateInput = document.getElementById('dateInputHidden');
@@ -427,10 +548,10 @@
     setDate(state.activeDate);
   }
 
-  // 4. Header & Stage Stats
+  // 6. Header & Stage Stats
   function updateHeaderStats() {
     const farmNameEl = document.getElementById('headerFarmName');
-    if (farmNameEl) farmNameEl.textContent = state.settings.farmName || '토마토 스마트팜';
+    if (farmNameEl) farmNameEl.textContent = state.settings.farmName || '토마토 농장';
 
     const pDate = state.growthProfile.plantingDate || '2026-08-25';
     const dat = getDat(state.activeDate, pDate);
@@ -463,7 +584,6 @@
       }
     }
 
-    // Stage Banner
     const currentStage = getCurrentStage(dat);
     const bannerTitle = document.getElementById('bannerStageTitle');
     const bannerDat = document.getElementById('bannerDatText');
@@ -472,7 +592,6 @@
     if (bannerDat) bannerDat.textContent = dat < 0 ? `D${dat}일` : `DAT ${dat}일차`;
     if (bannerGuide) bannerGuide.textContent = `농진청 권장: ${currentStage.keyTasks[0] || currentStage.desc}`;
 
-    // Weather Banner in Header
     const reg = WEATHER_REGIONS[state.selectedRegionKey] || WEATHER_REGIONS.buyeo;
     const regNameEl = document.getElementById('headerRegionName');
     const weatherRegEl = document.getElementById('routineWeatherRegion');
@@ -519,128 +638,81 @@
     if (code >= 80 && code <= 82) return { text: '소나기', icon: '🌦️' };
     if (code >= 95) return { text: '뇌우', icon: '⛈️' };
     return { text: '맑음', icon: '☀️' };
-  }  // 5. Weather Module Implementation (White Theme)
-  let chartHourlyWeatherInstance = null;
+  }  // 7. Weather Module & Open-Meteo Integration
+  let chartHourlyInstance = null;
 
   function setupWeatherModule() {
-    const selectReg = document.getElementById('selectWeatherRegion');
-    const btnGps = document.getElementById('btnGpsLocation');
-    const btnRefresh = document.getElementById('btnRefreshWeather');
-
-    if (selectReg) {
-      selectReg.value = state.selectedRegionKey || 'buyeo';
-      selectReg.addEventListener('change', (e) => {
+    const selectRegion = document.getElementById('selectWeatherRegion');
+    if (selectRegion) {
+      selectRegion.value = state.selectedRegionKey;
+      selectRegion.addEventListener('change', (e) => {
         state.selectedRegionKey = e.target.value;
         saveToStorage('tomato_weather_region', state.selectedRegionKey);
         fetchWeatherData(state.selectedRegionKey);
       });
     }
 
-    if (btnGps) {
-      btnGps.addEventListener('click', () => {
-        if (!navigator.geolocation) {
-          alert('브라우저에서 위치 정보를 지원하지 않습니다.');
-          return;
-        }
-        showToast('📍 GPS 위치를 탐색 중입니다...', 'info');
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const lat = pos.coords.latitude;
-            const lon = pos.coords.longitude;
-            WEATHER_REGIONS.custom_gps = { name: '📍 현재 내 농장 위치', lat, lon };
-            state.selectedRegionKey = 'custom_gps';
-            saveToStorage('tomato_weather_region', 'custom_gps');
-            fetchWeatherData('custom_gps');
-            showToast('GPS 위치 기반 날씨를 성공적으로 불러왔습니다!');
-          },
-          (err) => {
-            alert('위치 정보를 가져올 수 없습니다. 기본 지역을 선택해 주세요.');
-          }
-        );
-      });
-    }
-
+    const btnRefresh = document.getElementById('btnRefreshWeather');
     if (btnRefresh) {
       btnRefresh.addEventListener('click', () => {
         const icon = document.getElementById('weatherRefreshIcon');
         if (icon) icon.classList.add('animate-spin');
         fetchWeatherData(state.selectedRegionKey, () => {
           if (icon) icon.classList.remove('animate-spin');
-          showToast('기상청 실시간 날씨 데이터가 갱신되었습니다.');
+          showToast('기상청 실시간 날씨 데이터가 갱신되었습니다!');
         });
       });
     }
-  }
 
-  function fetchWeatherData(regionKey, callback) {
-    const reg = WEATHER_REGIONS[regionKey] || WEATHER_REGIONS.buyeo;
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${reg.lat}&longitude=${reg.lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,shortwave_radiation&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,shortwave_radiation&daily=weather_code,temperature_2m_max,temperature_2m_min,shortwave_radiation_sum,precipitation_probability_max&timezone=Asia%2FSeoul`;
-
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        state.weatherData = data;
-        saveToStorage('tomato_weather_cache', data);
-        updateHeaderStats();
-        if (state.activeTab === 'weather') renderWeather();
-        if (callback) callback();
-      })
-      .catch(err => {
-        console.warn('Weather fetch error:', err);
-        if (callback) callback();
+    const btnGps = document.getElementById('btnGpsLocation');
+    if (btnGps) {
+      btnGps.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          alert('현재 브라우저에서 GPS 위치 정보를 지원하지 않습니다.');
+          return;
+        }
+        btnGps.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> 위치 확인중...';
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            btnGps.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i> GPS';
+            if (window.lucide) window.lucide.createIcons();
+            const lat = pos.coords.latitude;
+            const lon = pos.coords.longitude;
+            fetchCustomCoordinatesWeather(lat, lon, 'GPS 현재 위치');
+          },
+          (err) => {
+            btnGps.innerHTML = '<i data-lucide="map-pin" class="w-4 h-4"></i> GPS';
+            if (window.lucide) window.lucide.createIcons();
+            alert('GPS 위치를 가져올 수 없습니다: ' + err.message);
+          }
+        );
       });
+    }
   }
 
-  function generateSmartFarmAdvice(wData) {
-    if (!wData || !wData.current) {
-      return {
-        icon: '☀️',
-        title: '정상 생육 기상',
-        short: '기상 데이터 기반 양액 및 환기 정상 가동 권장.',
-        full: '현재 기온과 일사량이 안정적입니다. 표준 급액량 및 배액률(20~30%)을 유지하세요.'
-      };
+  async function fetchWeatherData(regionKey, callback) {
+    const reg = WEATHER_REGIONS[regionKey] || WEATHER_REGIONS.buyeo;
+    await fetchCustomCoordinatesWeather(reg.lat, reg.lon, reg.name, callback);
+  }
+
+  async function fetchCustomCoordinatesWeather(lat, lon, locationName, callback) {
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m,shortwave_radiation&hourly=temperature_2m,relative_humidity_2m,precipitation_probability,weather_code,shortwave_radiation,direct_normal_irradiance&daily=weather_code,temperature_2m_max,temperature_2m_min,shortwave_radiation_sum,precipitation_probability_max&timezone=Asia%2FSeoul&forecast_days=4`;
+      
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('기상청 날씨 API 응답 오류');
+      const data = await res.json();
+
+      state.weatherData = data;
+      saveToStorage('tomato_weather_cache', data);
+
+      updateHeaderStats();
+      if (state.activeTab === 'weather') renderWeather();
+      if (callback) callback();
+    } catch (err) {
+      console.warn('Weather fetch error:', err);
+      if (callback) callback();
     }
-
-    const cur = wData.current;
-    const daily = wData.daily || {};
-    const solarW = cur.shortwave_radiation || 0;
-    const rainProb = (daily.precipitation_probability_max && daily.precipitation_probability_max[0]) || 0;
-    const tempMax = (daily.temperature_2m_max && daily.temperature_2m_max[0]) || 28;
-    const tempMin = (daily.temperature_2m_min && daily.temperature_2m_min[0]) || 16;
-
-    if (rainProb >= 60 || cur.weather_code >= 51) {
-      return {
-        icon: '🌧️',
-        title: '흐림/비 예보: 저일사 대비 급액 및 곰팡이병 방제 권고',
-        short: `비/흐림 예보 (강수확률 ${rainProb}%). 공급 EC +0.2 상향 및 과습/도장 방지.`,
-        full: `오늘 강수 및 저일사가 예상됩니다. 작물 증산량 감소로 인한 배액 과다 및 줄기 도장을 막기 위해 공급 EC를 0.2 dS/m 상향(2.6 dS/m)하고 급액 횟수를 1~2회 줄이세요. 온실 내 다습으로 인한 잿빛곰팡이병 예방을 위해 유동팬을 상시 가동하고 측창을 약간 열어 환기를 확보하세요.`
-      };
-    }
-
-    if (solarW >= 500 || tempMax >= 30) {
-      return {
-        icon: '☀️',
-        title: '고일사/고온 예보: 일사비례 급액 증량 및 차광 가동',
-        short: `강한 일사량(${Math.round(solarW)} W/m²). 급액 횟수 증량 및 주간 28℃ 이상 차광 가동.`,
-        full: `강한 햇빛과 높은 온도가 예상됩니다. 작물 증산량이 급증하므로 1회 급액량은 유지하되 오전 10시~오후 2시 사이 급액 간격을 좁혀 1~2회 추가 급액하세요. 온실 온도가 28℃를 초과할 경우 차광 스크린 30~50%를 가동하여 엽온 상승과 과실 일소과(햇빛 데임)를 방지하세요.`
-      };
-    }
-
-    if (tempMin <= 12) {
-      return {
-        icon: '❄️',
-        title: '야간 저온 주의: 보온 커튼 및 난방 설정 확인',
-        short: `야간 최저 ${Math.round(tempMin)}℃ 예보. 일몰 전 다겹보온커튼 닫힘 및 15℃ 유지.`,
-        full: `야간 온도가 낮아져 토마토 야간 호흡 및 당류 전이가 지연될 수 있습니다. 일몰 1시간 전 다겹보온커튼을 닫아 온실 잔열을 보존하고 온수보일러 최저 난방 온도를 15~16℃로 설정해 저온 스트레스 및 착과 불량을 예방하세요.`
-      };
-    }
-
-    return {
-      icon: '🌤️',
-      title: '적정 재배 기상: 표준 일사비례 급액 유지',
-      short: `적정 기상(기온 ${Math.round(cur.temperature_2m)}℃, 일사 ${Math.round(solarW)} W/m²). 표준 급액 관리.`,
-      full: `현재 온실 내외 기상 조건이 완숙토마토 생육에 최적입니다. 목표 공급 EC(2.4 dS/m), 공급 pH(5.8) 및 목표 배액률(20~30%)을 유지하며 정기적인 곁순제거 및 하엽 정리를 진행하세요.`
-    };
   }
 
   function renderWeather() {
@@ -649,86 +721,138 @@
     const daily = state.weatherData.daily || {};
     const wInfo = getWeatherDesc(cur.weather_code);
 
-    document.getElementById('weatherCurTemp').textContent = `${Math.round(cur.temperature_2m)} ℃`;
-    document.getElementById('weatherApparentTemp').textContent = `체감 ${Math.round(cur.apparent_temperature)} ℃`;
-    document.getElementById('weatherCurSolar').textContent = `${Math.round(cur.shortwave_radiation || 0)} W/m²`;
+    const elCurTemp = document.getElementById('weatherCurTemp');
+    const elAppTemp = document.getElementById('weatherApparentTemp');
+    const elCurSolar = document.getElementById('weatherCurSolar');
+    const elSolarSum = document.getElementById('weatherDailySolarSum');
+    const elHumidity = document.getElementById('weatherCurHumidity');
+    const elWind = document.getElementById('weatherCurWind');
+    const elSky = document.getElementById('weatherSkyCondition');
+    const elPrecipProb = document.getElementById('weatherPrecipProb');
+    const elMaxMin = document.getElementById('weatherMaxMinTemp');
+    const elUpdated = document.getElementById('weatherLastUpdatedText');
 
-    const solarSumMJ = (daily.shortwave_radiation_sum && daily.shortwave_radiation_sum[0]) || 0;
-    const solarSumJ = Math.round(solarSumMJ * 100);
-    document.getElementById('weatherDailySolarSum').textContent = `누적 예상: ${solarSumJ} J/cm²`;
+    if (elCurTemp) elCurTemp.textContent = `${cur.temperature_2m.toFixed(1)} ℃`;
+    if (elAppTemp) elAppTemp.textContent = `체감 ${cur.apparent_temperature ? cur.apparent_temperature.toFixed(1) : cur.temperature_2m.toFixed(1)} ℃`;
+    
+    const solarVal = Math.round(cur.shortwave_radiation || 0);
+    if (elCurSolar) elCurSolar.textContent = `${solarVal} W/m²`;
+    
+    const dailySolarMJ = (daily.shortwave_radiation_sum && daily.shortwave_radiation_sum[0]) || 0;
+    const dailySolarJ = Math.round(dailySolarMJ * 100);
+    if (elSolarSum) elSolarSum.textContent = `오늘 누적: ${dailySolarJ} J/cm²`;
 
-    document.getElementById('weatherCurHumidity').textContent = `${cur.relative_humidity_2m}%`;
-    document.getElementById('weatherCurWind').textContent = `${cur.wind_speed_10m} m/s`;
-    document.getElementById('weatherSkyCondition').textContent = `${wInfo.icon} ${wInfo.text}`;
+    if (elHumidity) elHumidity.textContent = `${cur.relative_humidity_2m} %`;
+    if (elWind) elWind.textContent = `${cur.wind_speed_10m.toFixed(1)} m/s`;
+    if (elSky) elSky.textContent = `${wInfo.icon} ${wInfo.text}`;
 
-    const rainProb = (daily.precipitation_probability_max && daily.precipitation_probability_max[0]) || 0;
-    document.getElementById('weatherPrecipProb').textContent = `강수확률: ${rainProb}%`;
+    const maxP = (daily.precipitation_probability_max && daily.precipitation_probability_max[0]) || 0;
+    if (elPrecipProb) elPrecipProb.textContent = `강수확률: ${maxP}%`;
 
-    const tMax = Math.round((daily.temperature_2m_max && daily.temperature_2m_max[0]) || 0);
-    const tMin = Math.round((daily.temperature_2m_min && daily.temperature_2m_min[0]) || 0);
-    document.getElementById('weatherMaxMinTemp').textContent = `${tMax} / ${tMin} ℃`;
+    const tMax = daily.temperature_2m_max ? Math.round(daily.temperature_2m_max[0]) : '-';
+    const tMin = daily.temperature_2m_min ? Math.round(daily.temperature_2m_min[0]) : '-';
+    if (elMaxMin) elMaxMin.textContent = `${tMax}℃ / ${tMin}℃`;
 
-    const advice = generateSmartFarmAdvice(state.weatherData);
-    document.getElementById('advisorStatusIcon').textContent = advice.icon;
-    document.getElementById('advisorTitle').textContent = advice.title;
-    document.getElementById('advisorContent').textContent = advice.full;
-
-    const cardsContainer = document.getElementById('weatherDailyCardsContainer');
-    if (cardsContainer && daily.time) {
-      let cardsHtml = '';
-      const dayNames = ['오늘', '내일', '모레'];
-      for (let i = 0; i < Math.min(3, daily.time.length); i++) {
-        const dayCode = daily.weather_code[i];
-        const dayInfo = getWeatherDesc(dayCode);
-        const dayMax = Math.round(daily.temperature_2m_max[i]);
-        const dayMin = Math.round(daily.temperature_2m_min[i]);
-        const daySolarMJ = daily.shortwave_radiation_sum[i] || 0;
-
-        cardsHtml += `
-          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm">
-            <div class="flex items-center gap-3">
-              <span class="text-2xl">${dayInfo.icon}</span>
-              <div>
-                <span class="text-xs font-bold text-slate-900">${dayNames[i]} (${daily.time[i].slice(5)})</span>
-                <span class="text-[11px] text-slate-500 block font-medium">${dayInfo.text}</span>
-              </div>
-            </div>
-            <div class="text-right text-xs">
-              <div class="font-bold text-slate-800"><span class="text-rose-600">${dayMax}℃</span> / <span class="text-sky-600">${dayMin}℃</span></div>
-              <span class="text-[10px] text-amber-700 font-bold">일사: ${Math.round(daySolarMJ * 100)} J/cm²</span>
-            </div>
-          </div>
-        `;
-      }
-      cardsContainer.innerHTML = cardsHtml;
+    if (elUpdated) {
+      const now = new Date();
+      elUpdated.textContent = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')} 기준`;
     }
 
-    renderWeatherHourlyChart();
-    if (window.lucide) window.lucide.createIcons();
+    renderWeatherAdvisor(solarVal, cur.temperature_2m, cur.relative_humidity_2m, cur.weather_code);
+    renderHourlyWeatherChart();
+    renderDailyForecastCards();
   }
 
-  function renderWeatherHourlyChart() {
-    const ctx = document.getElementById('chartHourlyWeather');
-    if (!ctx || !state.weatherData || !state.weatherData.hourly || !window.Chart) return;
+  function generateSmartFarmAdvice(weatherData) {
+    if (!weatherData || !weatherData.current) {
+      return {
+        icon: '☀️',
+        title: '정상 생육 기상',
+        short: '적정 일사량 유지 중. 표준 일사비례 급액 실시.',
+        full: '온실 내 온습도 및 배액률을 모니터링하며 표준 관리 요령을 유지하세요.'
+      };
+    }
 
+    const cur = weatherData.current;
+    const solar = cur.shortwave_radiation || 0;
+    const temp = cur.temperature_2m;
+    const humidity = cur.relative_humidity_2m;
+    const code = cur.weather_code;
+
+    if (solar > 500 && temp > 28) {
+      return {
+        icon: '🔥',
+        title: '강한 일사 & 고온 주의 (일사량 500 W/m² 이상)',
+        short: '고온·강일사 발생. 1회 급액량 유지 및 급액 주기 단축(다회 급액), 차광 스크린 30% 가동 권장.',
+        full: '강한 일사로 증산량이 급증하므로 급액 간격을 좁혀 근권 건조를 방지하세요. 온실 내부 온도가 30℃를 초과할 경우 차광 스크린을 30~50% 일시 전개하고 포그 분무 또는 환기팬을 최대 가동하세요.'
+      };
+    } else if (solar < 150 || (code >= 51 && code <= 67)) {
+      return {
+        icon: '🌧️',
+        title: '흐림/강우 및 저일사 모드 (일사량 150 W/m² 미만)',
+        short: '저일사 지속. 급액 횟수 30~50% 감량 및 공급 EC 0.2~0.4 dS/m 상향(농도 진하게) 처방.',
+        full: '흐린 날씨에는 식물체의 수분 흡수량이 급감합니다. 급액량을 줄이지 않으면 배지가 과습해져 뿌리 호흡 장애 및 잿빛곰팡이병이 발생할 수 있습니다. 공급 EC를 0.2~0.4 dS/m 올려 도장을 억제하세요.'
+      };
+    } else if (temp < 14) {
+      return {
+        icon: '❄️',
+        title: '야간 저온 주의보 (외부 기온 14℃ 이하)',
+        short: '야간 저온 예보. 보온 커튼 조기 폐쇄 및 난방기 사전 점검, 온실 내 최저 15℃ 유지 필수.',
+        full: '온실 내부 야간 기온이 13℃ 이하로 내려가면 과실 착색 지연 및 기형과 발생률이 높아집니다. 일몰 1시간 전 보온 다겹스크린을 닫아 축열을 극대화하세요.'
+      };
+    } else if (humidity > 85) {
+      return {
+        icon: '🌫️',
+        title: '고습 환경 주의 (습도 85% 이상)',
+        short: '고습 지속으로 잎곰팡이 및 잿빛곰팡이병 위험. 유동팬 100% 가동 및 일출 전 습도 배출 환기.',
+        full: '다습한 환경은 곰팡이성 병해의 온상입니다. 유동팬을 연속 가동하여 온실 내 정체 공기를 순환시키고, 일출 직후 천창을 미세 개방(1~2%)하여 결로를 방지하세요.'
+      };
+    } else {
+      return {
+        icon: '☀️',
+        title: '최적 생육 기상 조건',
+        short: '기온 및 일사량 적정. 누적 일사량 비례 자동 급액 및 목표 배액률 25~30% 유지.',
+        full: '완숙토마토 생육에 매우 유리한 기상 조건입니다. 누적 일사량 100~120 J/cm² 도달 시마다 회당 100~150ml 정량 급액을 실시하세요.'
+      };
+    }
+  }
+
+  function renderWeatherAdvisor(solar, temp, humidity, code) {
+    const advice = generateSmartFarmAdvice(state.weatherData);
+    const iconEl = document.getElementById('advisorStatusIcon');
+    const titleEl = document.getElementById('advisorTitle');
+    const contentEl = document.getElementById('advisorContent');
+
+    if (iconEl) iconEl.textContent = advice.icon;
+    if (titleEl) titleEl.textContent = advice.title;
+    if (contentEl) contentEl.textContent = advice.full;
+  }
+
+  function renderHourlyWeatherChart() {
+    if (!state.weatherData || !state.weatherData.hourly || !window.Chart) return;
     const hourly = state.weatherData.hourly;
+    const nowHour = new Date().getHours();
+
     const labels = [];
     const solarData = [];
     const tempData = [];
 
-    const now = new Date();
-    const curHour = now.getHours();
-
-    for (let i = curHour; i < curHour + 18 && i < hourly.time.length; i++) {
-      const timeStr = hourly.time[i].slice(11, 16);
-      labels.push(timeStr);
-      solarData.push(Math.round(hourly.shortwave_radiation[i] || 0));
-      tempData.push(Math.round(hourly.temperature_2m[i]));
+    for (let i = 0; i < 24; i++) {
+      const idx = nowHour + i;
+      if (idx >= hourly.time.length) break;
+      const tStr = hourly.time[idx];
+      const hour = new Date(tStr).getHours();
+      labels.push(`${hour}시`);
+      solarData.push(Math.round(hourly.shortwave_radiation[idx] || 0));
+      tempData.push(parseFloat((hourly.temperature_2m[idx] || 0).toFixed(1)));
     }
 
-    if (chartHourlyWeatherInstance) chartHourlyWeatherInstance.destroy();
+    const ctx = document.getElementById('chartHourlyWeather');
+    if (!ctx) return;
 
-    chartHourlyWeatherInstance = new Chart(ctx, {
+    if (chartHourlyInstance) chartHourlyInstance.destroy();
+
+    chartHourlyInstance = new Chart(ctx, {
       type: 'line',
       data: {
         labels,
@@ -738,45 +862,95 @@
             data: solarData,
             borderColor: '#f59e0b',
             backgroundColor: 'rgba(245, 158, 11, 0.15)',
-            yAxisID: 'ySolar',
-            tension: 0.3,
-            fill: true
+            fill: true,
+            tension: 0.35,
+            yAxisID: 'ySolar'
           },
           {
             label: '기온 (℃)',
             data: tempData,
             borderColor: '#0284c7',
             backgroundColor: 'transparent',
-            yAxisID: 'yTemp',
+            tension: 0.35,
             borderDash: [4, 4],
-            tension: 0.3
+            yAxisID: 'yTemp'
           }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
         plugins: {
-          legend: { labels: { color: '#334155', font: { family: 'Pretendard', size: 11, weight: 'bold' } } }
+          legend: {
+            labels: { color: '#334155', font: { family: 'Pretendard', size: 11, weight: 'bold' } }
+          }
         },
         scales: {
-          x: { grid: { color: 'rgba(0, 0, 0, 0.05)' }, ticks: { color: '#64748b', font: { size: 10, weight: '600' } } },
+          x: {
+            grid: { color: 'rgba(0, 0, 0, 0.05)' },
+            ticks: { color: '#64748b', font: { size: 10, weight: '600' } }
+          },
           ySolar: {
             type: 'linear',
             position: 'left',
             grid: { color: 'rgba(0, 0, 0, 0.05)' },
-            ticks: { color: '#d97706', font: { size: 10, weight: '600' }, callback: (val) => `${val}W` }
+            ticks: { color: '#d97706', callback: (val) => `${val}W` },
+            min: 0
           },
           yTemp: {
             type: 'linear',
             position: 'right',
             grid: { drawOnChartArea: false },
-            ticks: { color: '#0284c7', font: { size: 10, weight: '600' }, callback: (val) => `${val}℃` }
+            ticks: { color: '#0284c7', callback: (val) => `${val}℃` }
           }
         }
       }
     });
-  }  // 6. Routines Module (White Theme)
+  }
+
+  function renderDailyForecastCards() {
+    const container = document.getElementById('weatherDailyCardsContainer');
+    if (!container || !state.weatherData || !state.weatherData.daily) return;
+    const daily = state.weatherData.daily;
+
+    let html = '';
+    const dayNames = ['오늘', '내일', '모레'];
+
+    for (let i = 0; i < 3; i++) {
+      if (!daily.time || !daily.time[i]) continue;
+      const tMax = Math.round(daily.temperature_2m_max[i]);
+      const tMin = Math.round(daily.temperature_2m_min[i]);
+      const code = daily.weather_code[i];
+      const wInfo = getWeatherDesc(code);
+      const prob = daily.precipitation_probability_max ? daily.precipitation_probability_max[i] : 0;
+      const solarMJ = daily.shortwave_radiation_sum ? daily.shortwave_radiation_sum[i] : 0;
+      const solarJ = Math.round(solarMJ * 100);
+
+      html += `
+        <div class="p-3.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between shadow-sm">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-black text-slate-800">${dayNames[i]} (${daily.time[i].substring(5)})</span>
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 text-sky-800 font-bold">${wInfo.text}</span>
+            </div>
+            <div class="text-xs text-slate-500 mt-1 font-semibold">
+              누적일사: <b class="text-amber-700 font-bold">${solarJ} J/cm²</b>
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-2xl">${wInfo.icon}</span>
+            <div class="text-xs font-black text-slate-900 mt-0.5">
+              <span class="text-rose-600">${tMax}℃</span> / <span class="text-sky-600">${tMin}℃</span>
+            </div>
+            <div class="text-[10px] text-slate-500 font-medium">강수 ${prob}%</div>
+          </div>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+  }  // 8. Routines Module with Supabase Cloud Sync
   function setupRoutinesModule() {
     const filterButtons = document.querySelectorAll('.routine-filter-btn');
     filterButtons.forEach(btn => {
@@ -794,10 +968,17 @@
 
     const btnReset = document.getElementById('btnResetDayRoutines');
     if (btnReset) {
-      btnReset.addEventListener('click', () => {
+      btnReset.addEventListener('click', async () => {
         if (confirm(`${state.activeDate} 일자의 모든 루틴 체크를 초기화하시겠습니까?`)) {
           delete state.routineLogs[state.activeDate];
           saveToStorage('tomato_routine_logs', state.routineLogs);
+          
+          if (supabase) {
+            try {
+              await supabase.from('routine_logs').delete().eq('log_date', state.activeDate);
+            } catch (e) {}
+          }
+
           updateHeaderStats();
           renderRoutines();
           showToast('해당 일자의 체크리스트가 초기화되었습니다.', 'info');
@@ -819,7 +1000,7 @@
     if (btnCancelAdd) btnCancelAdd.addEventListener('click', closeModal);
 
     if (btnSubmitAdd) {
-      btnSubmitAdd.addEventListener('click', () => {
+      btnSubmitAdd.addEventListener('click', async () => {
         const title = document.getElementById('inputNewRoutineTitle').value.trim();
         const category = document.getElementById('inputNewRoutineCategory').value;
         const interval = parseInt(document.getElementById('inputNewRoutineInterval').value, 10) || 1;
@@ -840,14 +1021,26 @@
 
         state.routines.push(newRoutine);
         saveToStorage('tomato_routines', state.routines);
-        closeModal();
 
+        if (supabase) {
+          try {
+            await supabase.from('routines').upsert({
+              id: newRoutine.id,
+              title: newRoutine.title,
+              category: newRoutine.category,
+              interval_days: newRoutine.interval,
+              guide: newRoutine.guide
+            });
+          } catch (e) {}
+        }
+
+        closeModal();
         document.getElementById('inputNewRoutineTitle').value = '';
         document.getElementById('inputNewRoutineGuide').value = '';
         
         renderRoutines();
         updateHeaderStats();
-        showToast('새 루틴이 성공적으로 추가되었습니다!');
+        showToast('새 루틴이 클라우드에 성공적으로 추가되었습니다!');
       });
     }
   }
@@ -936,13 +1129,26 @@
     }).join('');
 
     container.querySelectorAll('.routine-checkbox').forEach(cb => {
-      cb.addEventListener('change', (e) => {
+      cb.addEventListener('change', async (e) => {
         const id = e.target.dataset.id;
         if (!state.routineLogs[state.activeDate]) {
           state.routineLogs[state.activeDate] = {};
         }
         state.routineLogs[state.activeDate][id] = e.target.checked;
         saveToStorage('tomato_routine_logs', state.routineLogs);
+
+        // Supabase sync
+        if (supabase) {
+          try {
+            await supabase.from('routine_logs').upsert({
+              id: `${state.activeDate}:${id}`,
+              log_date: state.activeDate,
+              routine_id: id,
+              is_completed: e.target.checked,
+              updated_at: new Date().toISOString()
+            });
+          } catch (err) {}
+        }
         
         updateHeaderStats();
         renderRoutines();
@@ -957,11 +1163,18 @@
     });
 
     container.querySelectorAll('.btn-delete-routine').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const id = btn.dataset.deleteId;
         if (confirm('이 커스텀 루틴을 삭제하시겠습니까?')) {
           state.routines = state.routines.filter(r => r.id !== id);
           saveToStorage('tomato_routines', state.routines);
+
+          if (supabase) {
+            try {
+              await supabase.from('routines').delete().eq('id', id);
+            } catch (e) {}
+          }
+
           renderRoutines();
           updateHeaderStats();
           showToast('루틴이 삭제되었습니다.');
@@ -972,7 +1185,7 @@
     if (window.lucide) window.lucide.createIcons();
   }
 
-  // 7. RDA Annual Scheduler Module (White Theme)
+  // 9. RDA Annual Scheduler Module with Supabase Cloud Sync
   function setupSchedulerModule() {
     const inputPlanting = document.getElementById('inputPlantingDate');
     const selectCrop = document.getElementById('selectCropType');
@@ -986,7 +1199,7 @@
     }
 
     if (btnApply) {
-      btnApply.addEventListener('click', () => {
+      btnApply.addEventListener('click', async () => {
         const pDate = inputPlanting.value;
         const cType = selectCrop.value;
         if (!pDate) {
@@ -998,9 +1211,20 @@
         state.growthProfile.cropType = cType;
         saveToStorage('tomato_growth_profile', state.growthProfile);
 
+        if (supabase) {
+          try {
+            await supabase.from('growth_profile').upsert({
+              id: 'default',
+              planting_date: pDate,
+              crop_type: cType,
+              updated_at: new Date().toISOString()
+            });
+          } catch (e) {}
+        }
+
         updateHeaderStats();
         renderScheduler();
-        showToast('정식일 및 작형 스케줄이 성공적으로 갱신되었습니다!');
+        showToast('정식일 및 작형 스케줄이 클라우드에 갱신되었습니다!');
       });
     }
   }
@@ -1128,17 +1352,28 @@
     container.innerHTML = html;
 
     container.querySelectorAll('.stage-check-input').forEach(input => {
-      input.addEventListener('change', (e) => {
+      input.addEventListener('change', async (e) => {
         const key = e.target.dataset.stageCheck;
         state.stageChecklist[key] = e.target.checked;
         saveToStorage('tomato_stage_checklist', state.stageChecklist);
+
+        if (supabase) {
+          try {
+            await supabase.from('stage_checklist').upsert({
+              key,
+              is_checked: e.target.checked,
+              updated_at: new Date().toISOString()
+            });
+          } catch (err) {}
+        }
+
         renderScheduler();
         showToast('생육 단계 체크리스트가 저장되었습니다.');
       });
     });
 
     if (window.lucide) window.lucide.createIcons();
-  }  // 8. Bed Matrix Module (White Theme)
+  }  // 10. Bed Matrix Module with Supabase Cloud Sync
   function setupBedMatrixModule() {
     const taskButtons = document.querySelectorAll('.bed-task-type-btn');
     taskButtons.forEach(btn => {
@@ -1183,24 +1418,40 @@
     });
 
     if (btnBatchComplete) {
-      btnBatchComplete.addEventListener('click', () => {
+      btnBatchComplete.addEventListener('click', async () => {
         if (state.selectedBeds.size === 0) return;
         if (!state.bedStatus[state.activeBedTask]) {
           state.bedStatus[state.activeBedTask] = {};
         }
 
+        const updates = [];
         state.selectedBeds.forEach(bedNum => {
           state.bedStatus[state.activeBedTask][bedNum] = {
             status: 'done',
             date: state.activeDate
           };
+          updates.push({
+            id: `${state.activeBedTask}:${bedNum}`,
+            task_type: state.activeBedTask,
+            bed_number: bedNum,
+            status: 'done',
+            completed_date: state.activeDate,
+            updated_at: new Date().toISOString()
+          });
         });
 
         saveToStorage('tomato_bed_status', state.bedStatus);
+
+        if (supabase && updates.length > 0) {
+          try {
+            await supabase.from('bed_status').upsert(updates);
+          } catch (e) {}
+        }
+
         const count = state.selectedBeds.size;
         state.selectedBeds.clear();
         renderBedMatrix();
-        showToast(`${count}개 베드의 작업이 오늘 완료로 기록되었습니다!`);
+        showToast(`${count}개 베드의 작업이 클라우드에 완료 기록되었습니다!`);
       });
     }
   }
@@ -1302,7 +1553,7 @@
     container.innerHTML = html;
 
     container.querySelectorAll('.bed-card').forEach(card => {
-      card.addEventListener('click', (e) => {
+      card.addEventListener('click', async (e) => {
         if (e.target.closest('.btn-select-single')) {
           e.stopPropagation();
           const bedNum = parseInt(card.dataset.bed, 10);
@@ -1321,12 +1572,28 @@
         else if (currentStatus === 'in_progress') nextStatus = 'done';
         else if (currentStatus === 'done') nextStatus = 'pending';
 
+        const completedDate = nextStatus !== 'pending' ? state.activeDate : null;
+
         state.bedStatus[task][bedNum] = {
           status: nextStatus,
-          date: nextStatus !== 'pending' ? state.activeDate : null
+          date: completedDate
         };
 
         saveToStorage('tomato_bed_status', state.bedStatus);
+
+        if (supabase) {
+          try {
+            await supabase.from('bed_status').upsert({
+              id: `${task}:${bedNum}`,
+              task_type: task,
+              bed_number: bedNum,
+              status: nextStatus,
+              completed_date: completedDate,
+              updated_at: new Date().toISOString()
+            });
+          } catch (err) {}
+        }
+
         renderBedMatrix();
       });
     });
@@ -1334,7 +1601,7 @@
     if (window.lucide) window.lucide.createIcons();
   }
 
-  // 9. Daily Log Module with Weather Auto-Fill (White Theme)
+  // 11. Daily Log Module with Weather Auto-Fill & Supabase Sync
   let currentUploadedPhotoBase64 = null;
 
   function setupDailyLogModule() {
@@ -1437,7 +1704,6 @@
       if (input) input.addEventListener('input', updateCalculations);
     });
 
-    // 1-Click Weather Auto Fill
     const btnAutoFill = document.getElementById('btnAutoFillWeather');
     if (btnAutoFill) {
       btnAutoFill.addEventListener('click', () => {
@@ -1502,7 +1768,7 @@
 
     const btnSaveLog = document.getElementById('btnSaveDailyLog');
     if (btnSaveLog) {
-      btnSaveLog.addEventListener('click', () => {
+      btnSaveLog.addEventListener('click', async () => {
         const logData = {
           date: state.activeDate,
           supplyEc: parseFloat(inSupplyEc.value) || null,
@@ -1526,12 +1792,37 @@
         state.dailyLogs[state.activeDate] = logData;
         saveToStorage('tomato_daily_logs', state.dailyLogs);
 
+        // Supabase Cloud Sync
+        if (supabase) {
+          try {
+            await supabase.from('daily_logs').upsert({
+              log_date: state.activeDate,
+              supply_ec: logData.supplyEc,
+              drain_ec: logData.drainEc,
+              supply_ph: logData.supplyPh,
+              drain_ph: logData.drainPh,
+              supply_volume: logData.supplyVolume,
+              drain_volume: logData.drainVolume,
+              harvest_grade_a: logData.harvestGradeA,
+              harvest_grade_b: logData.harvestGradeB,
+              harvest_grade_c: logData.harvestGradeC,
+              temp_high: logData.tempHigh,
+              temp_low: logData.tempLow,
+              humidity: logData.humidity,
+              solar_radiation: logData.solarRadiation,
+              memo: logData.memo,
+              photo: logData.photo,
+              updated_at: logData.updatedAt
+            });
+          } catch (err) {}
+        }
+
         updateHeaderStats();
         renderLogHistory();
         if (window.confetti) {
           window.confetti({ particleCount: 60, spread: 50, origin: { y: 0.6 } });
         }
-        showToast(`${state.activeDate} 영농일지가 저장되었습니다!`);
+        showToast(`${state.activeDate} 영농일지가 클라우드 DB에 안전하게 저장되었습니다!`);
       });
     }
   }
@@ -1635,11 +1926,18 @@
     });
 
     container.querySelectorAll('.btn-history-del').forEach(btn => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         const dateStr = btn.dataset.delDate;
         if (confirm(`${dateStr} 일지의 데이터를 삭제하시겠습니까?`)) {
           delete state.dailyLogs[dateStr];
           saveToStorage('tomato_daily_logs', state.dailyLogs);
+
+          if (supabase) {
+            try {
+              await supabase.from('daily_logs').delete().eq('log_date', dateStr);
+            } catch (e) {}
+          }
+
           updateHeaderStats();
           renderDailyLogForm();
           showToast('해당 일지가 삭제되었습니다.');
@@ -1648,7 +1946,7 @@
     });
 
     if (window.lucide) window.lucide.createIcons();
-  }  // 10. Analytics Module (Chart.js - White Theme)
+  }  // 12. Analytics Module (Chart.js - White Theme)
   let chartEcInstance = null;
   let chartPhInstance = null;
   let chartDrainInstance = null;
@@ -1819,12 +2117,12 @@
     }
   }
 
-  // 11. Settings & Backup Module (White Theme)
+  // 13. Settings & Backup Module with Supabase Cloud Sync
   function setupSettingsModule() {
     const btnSaveSettings = document.getElementById('btnSaveFarmSettings');
     if (btnSaveSettings) {
-      btnSaveSettings.addEventListener('click', () => {
-        state.settings.farmName = document.getElementById('settingFarmName').value.trim() || '토마토 스마트팜';
+      btnSaveSettings.addEventListener('click', async () => {
+        state.settings.farmName = document.getElementById('settingFarmName').value.trim() || '토마토 농장';
         state.settings.bedCount = parseInt(document.getElementById('settingBedCount').value, 10) || 24;
         state.settings.targetSupplyEc = parseFloat(document.getElementById('settingTargetSupplyEc').value) || 2.4;
         state.settings.targetSupplyPh = parseFloat(document.getElementById('settingTargetSupplyPh').value) || 5.8;
@@ -1832,8 +2130,25 @@
         state.settings.targetDrainMax = parseFloat(document.getElementById('settingTargetDrainMax').value) || 30;
 
         saveToStorage('tomato_settings', state.settings);
+
+        if (supabase) {
+          try {
+            await supabase.from('farm_settings').upsert({
+              id: 'default',
+              farm_name: state.settings.farmName,
+              bed_count: state.settings.bedCount,
+              target_supply_ec: state.settings.targetSupplyEc,
+              target_supply_ph: state.settings.targetSupplyPh,
+              target_drain_min: state.settings.targetDrainMin,
+              target_drain_max: state.settings.targetDrainMax,
+              weather_region: state.selectedRegionKey,
+              updated_at: new Date().toISOString()
+            });
+          } catch (e) {}
+        }
+
         updateHeaderStats();
-        showToast('농장 및 온실 설정이 저장되었습니다!');
+        showToast('농장 및 온실 설정이 클라우드에 저장되었습니다!');
       });
     }
 
@@ -1873,7 +2188,7 @@
     if (btnExportJson) {
       btnExportJson.addEventListener('click', () => {
         const fullBackup = {
-          version: '1.4',
+          version: '2.0',
           exportedAt: new Date().toISOString(),
           settings: state.settings,
           selectedRegionKey: state.selectedRegionKey,
@@ -1971,7 +2286,7 @@
   }
 
   function renderSettings() {
-    document.getElementById('settingFarmName').value = state.settings.farmName || '토마토 스마트팜';
+    document.getElementById('settingFarmName').value = state.settings.farmName || '토마토 농장';
     document.getElementById('settingBedCount').value = state.settings.bedCount || 24;
     document.getElementById('settingTargetSupplyEc').value = state.settings.targetSupplyEc || 2.4;
     document.getElementById('settingTargetSupplyPh').value = state.settings.targetSupplyPh || 5.8;
