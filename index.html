@@ -26,18 +26,24 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+  <!-- Supabase Official Client JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
-  <!-- TOP HEADER (Clean White) -->
+  <!-- TOP HEADER (Clean White with Cloud Sync Indicator) -->
   <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-3 shadow-sm">
     <div class="max-w-7xl mx-auto flex items-center justify-between">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-rose-400 flex items-center justify-center text-2xl shadow-md shadow-brand-600/20">🍅</div>
         <div>
           <div class="flex items-center gap-2">
-            <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight" id="headerFarmName">토마토팜 매니저</h1>
+            <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight" id="headerFarmName">토마토 농장</h1>
             <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-200">1,000평 연동온실</span>
+            <span id="cloudSyncBadge" class="hidden sm:inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 font-bold border border-sky-200" title="수파베이스 서울 클라우드 DB 연동됨">
+              <span class="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse"></span>
+              <span>수파베이스 서울 연동</span>
+            </span>
           </div>
           <p class="text-xs text-slate-500 flex items-center gap-1.5" id="headerSummaryText">
             <span class="text-brand-600 font-bold" id="headerGrowthStageBadge">DAT 1일차</span>
@@ -164,7 +170,6 @@
 
     <!-- TAB 2: ⛅ 실시간 농업기상 & 처방 (White Light Theme) -->
     <section id="tab-weather" class="tab-pane hidden space-y-4">
-      <!-- Location & Refresh Card -->
       <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -176,7 +181,6 @@
             <p class="text-xs sm:text-sm text-slate-500 mt-0.5">외부 일사량과 온습도 예보를 기반으로 오늘 온실 급액과 환기 제어를 최적화합니다.</p>
           </div>
 
-          <!-- Region Selector & GPS Button -->
           <div class="flex items-center gap-2 self-start sm:self-auto">
             <select id="selectWeatherRegion" class="bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-xs sm:text-sm font-bold text-slate-800 focus:border-sky-500 focus:outline-none">
               <option value="buyeo">충남 부여군 (완숙토마토 주산지)</option>
@@ -200,39 +204,32 @@
           </div>
         </div>
 
-        <!-- Current Live Weather KPI Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5 pt-2">
-          <!-- Temp -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
             <span class="text-[11px] text-slate-500 block font-semibold">현재 기온</span>
             <div class="text-xl sm:text-2xl font-black text-slate-900 mt-0.5" id="weatherCurTemp">- ℃</div>
             <span class="text-[10px] text-slate-500" id="weatherApparentTemp">체감 -℃</span>
           </div>
-          <!-- Solar Radiation -->
           <div class="bg-amber-50/80 p-3 rounded-xl border border-amber-200 text-center ring-1 ring-amber-300">
             <span class="text-[11px] text-amber-800 block font-bold">☀️ 실시간 일사량</span>
             <div class="text-xl sm:text-2xl font-black text-amber-600 mt-0.5" id="weatherCurSolar">- W/m²</div>
             <span class="text-[10px] text-amber-800 font-semibold" id="weatherDailySolarSum">누적: - J/cm²</span>
           </div>
-          <!-- Humidity -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
             <span class="text-[11px] text-slate-500 block font-semibold">상대 습도</span>
             <div class="text-xl sm:text-2xl font-black text-sky-600 mt-0.5" id="weatherCurHumidity">-%</div>
             <span class="text-[10px] text-slate-500">외부 대기</span>
           </div>
-          <!-- Wind -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
             <span class="text-[11px] text-slate-500 block font-semibold">풍속</span>
             <div class="text-xl sm:text-2xl font-black text-emerald-600 mt-0.5" id="weatherCurWind">- m/s</div>
             <span class="text-[10px] text-slate-500">환기창 영향</span>
           </div>
-          <!-- Sky Condition -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
             <span class="text-[11px] text-slate-500 block font-semibold">하늘 상태</span>
             <div class="text-base sm:text-lg font-bold text-slate-800 mt-1" id="weatherSkyCondition">로딩 중...</div>
             <span class="text-[10px] text-slate-500 font-medium" id="weatherPrecipProb">강수확률: -%</span>
           </div>
-          <!-- Day Max / Min -->
           <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-center">
             <span class="text-[11px] text-slate-500 block font-semibold">오늘 최고 / 최저</span>
             <div class="text-base sm:text-lg font-black text-rose-600 mt-1" id="weatherMaxMinTemp">- / - ℃</div>
@@ -241,7 +238,6 @@
         </div>
       </div>
 
-      <!-- Smart Farm Weather Advisor Prescription Box -->
       <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -262,7 +258,6 @@
         </div>
       </div>
 
-      <!-- Hourly Solar Radiation & Temperature Chart -->
       <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
@@ -278,7 +273,6 @@
         </div>
       </div>
 
-      <!-- 3-Day Daily Forecast Cards -->
       <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
         <h3 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
           <i data-lucide="calendar" class="w-4 h-4 text-slate-500"></i> 주간 농업 기상 3일 예보
@@ -403,9 +397,7 @@
         <span class="text-slate-400 text-[11px]">💡 베드 카드를 누르면 상태가 즉시 변경됩니다</span>
       </div>
       <div id="bedGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
-    </section>
-
-    <!-- TAB 5: 양액 & 수확 일일 대시보드 (Light Theme) -->
+    </section>    <!-- TAB 5: 양액 & 수확 일일 대시보드 (Light Theme) -->
     <section id="tab-logs" class="tab-pane hidden space-y-4">
       <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
@@ -599,7 +591,7 @@
         <div class="space-y-4 pt-2 border-t border-slate-200">
           <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="layout-grid" class="w-4 h-4 text-emerald-600"></i> 온실 베드 구조 설정</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div><label class="block text-xs font-bold text-slate-700 mb-1">농장 이름 / 온실 명칭</label><input type="text" id="settingFarmName" value="토마토 스마트팜" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-semibold focus:border-brand-500 focus:outline-none"></div>
+            <div><label class="block text-xs font-bold text-slate-700 mb-1">농장 이름 / 온실 명칭</label><input type="text" id="settingFarmName" value="토마토 농장" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm text-slate-900 font-semibold focus:border-brand-500 focus:outline-none"></div>
             <div><label class="block text-xs font-bold text-slate-700 mb-1">총 베드 개수 (연동온실 내 라인 수)</label><div class="flex items-center gap-2"><input type="number" min="4" max="100" id="settingBedCount" value="24" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3 py-2 text-sm font-bold text-slate-900 focus:border-brand-500 focus:outline-none"><span class="text-xs text-slate-500 font-bold flex-shrink-0">개 베드</span></div></div>
           </div>
           <button id="btnSaveFarmSettings" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition shadow-sm">온실 설정 저장 적용</button>
