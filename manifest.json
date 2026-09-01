@@ -1,0 +1,16 @@
+﻿{
+  "name": "토마토팜 매니저 - 1000평 스마트팜 관리",
+  "short_name": "토마토팜",
+  "description": "1,000평 완숙토마토 연동온실 스마트팜 주기 체크 및 양액·베드 통합 관리",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#e11d48",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍅</text></svg>",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}
