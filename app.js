@@ -1,4 +1,4 @@
-﻿// Tomato Smart Farm Pro - Main JavaScript Engine with Supabase Cloud Sync & White Theme
+﻿// Tomato Smart Farm Pro - Main JavaScript Engine with Supabase Cloud Sync & 6-Digit PIN Security
 (function () {
   'use strict';
 
@@ -16,7 +16,8 @@
     targetSupplyEc: 2.4,
     targetSupplyPh: 5.8,
     targetDrainMin: 20,
-    targetDrainMax: 30
+    targetDrainMax: 30,
+    pinCode: '123456'
   };
 
   const DEFAULT_GROWTH_PROFILE = {
@@ -241,6 +242,7 @@
     activeBedTask: 'suckering',
     selectedBeds: new Set(),
     analyticsRange: 7,
+    enteredPin: '',
     selectedRegionKey: loadFromStorage('tomato_weather_region', 'buyeo'),
     weatherData: loadFromStorage('tomato_weather_cache', null),
     growthProfile: loadFromStorage('tomato_growth_profile', DEFAULT_GROWTH_PROFILE),
@@ -252,7 +254,6 @@
     dailyLogs: loadFromStorage('tomato_daily_logs', {})
   };
 
-  // Helper Functions
   function getTodayString() {
     return formatLocalDate(new Date());
   }
@@ -315,6 +316,7 @@
   });
 
   function initApp() {
+    setupPinLockModule();
     setupNavigation();
     setupDateNavigator();
     setupRoutinesModule();
@@ -334,11 +336,123 @@
     loadAllFromCloud();
   }
 
-  // 3. Supabase Cloud Sync Engine
+  // 3. 6-Digit PIN Lock Screen Engine
+  function setupPinLockModule() {
+    const lockScreen = document.getElementById('pinLockScreen');
+    const btnLockApp = document.getElementById('btnLockApp');
+    const pinErr = document.getElementById('pinErrorMessage');
+    const dotsContainer = document.getElementById('pinDotsContainer');
+
+    function updateDots() {
+      for (let i = 0; i < 6; i++) {
+        const dot = document.getElementById(`dot${i}`);
+        if (dot) {
+          if (i < state.enteredPin.length) {
+            dot.classList.add('filled');
+          } else {
+            dot.classList.remove('filled');
+          }
+        }
+      }
+    }
+
+    function checkPin() {
+      const correctPin = state.settings.pinCode || '123456';
+      if (state.enteredPin === correctPin) {
+        if (pinErr) pinErr.classList.add('hidden');
+        sessionStorage.setItem('tomato_farm_unlocked', 'true');
+        
+        lockScreen.classList.add('opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+          lockScreen.classList.add('hidden');
+          lockScreen.classList.remove('opacity-0');
+        }, 300);
+
+        showToast('농장주 인증 성공! 환영합니다.');
+        state.enteredPin = '';
+        updateDots();
+      } else {
+        if (pinErr) pinErr.classList.remove('hidden');
+        if (dotsContainer) {
+          dotsContainer.classList.add('shake-animation');
+          setTimeout(() => dotsContainer.classList.remove('shake-animation'), 450);
+        }
+        setTimeout(() => {
+          state.enteredPin = '';
+          updateDots();
+        }, 500);
+      }
+    }
+
+    function handleKeyPress(val) {
+      if (val >= '0' && val <= '9') {
+        if (state.enteredPin.length < 6) {
+          state.enteredPin += val;
+          updateDots();
+          if (state.enteredPin.length === 6) {
+            setTimeout(checkPin, 100);
+          }
+        }
+      } else if (val === 'backspace') {
+        if (state.enteredPin.length > 0) {
+          state.enteredPin = state.enteredPin.slice(0, -1);
+          updateDots();
+        }
+        if (pinErr) pinErr.classList.add('hidden');
+      } else if (val === 'clear') {
+        state.enteredPin = '';
+        updateDots();
+        if (pinErr) pinErr.classList.add('hidden');
+      }
+    }
+
+    // Keypad Clicks
+    const keyButtons = document.querySelectorAll('.pin-key-btn');
+    keyButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.key;
+        const action = btn.dataset.action;
+        if (key !== undefined) handleKeyPress(key);
+        else if (action) handleKeyPress(action);
+      });
+    });
+
+    // Keyboard physical keys
+    window.addEventListener('keydown', (e) => {
+      if (!lockScreen.classList.contains('hidden')) {
+        if (e.key >= '0' && e.key <= '9') {
+          handleKeyPress(e.key);
+        } else if (e.key === 'Backspace') {
+          handleKeyPress('backspace');
+        } else if (e.key === 'Escape') {
+          handleKeyPress('clear');
+        }
+      }
+    });
+
+    // Manual Lock Button
+    if (btnLockApp) {
+      btnLockApp.addEventListener('click', () => {
+        sessionStorage.removeItem('tomato_farm_unlocked');
+        state.enteredPin = '';
+        updateDots();
+        if (pinErr) pinErr.classList.add('hidden');
+        lockScreen.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+      });
+    }
+
+    // Check if previously unlocked in this session
+    const isUnlocked = sessionStorage.getItem('tomato_farm_unlocked') === 'true';
+    if (isUnlocked && lockScreen) {
+      lockScreen.classList.add('hidden');
+    }
+  }
+
+  // 4. Supabase Cloud Sync Engine
   async function loadAllFromCloud() {
     if (!supabase) return;
     try {
-      // 1. Settings
+      // 1. Settings (including PIN code)
       const { data: sData } = await supabase.from('farm_settings').select('*').eq('id', 'default').single();
       if (sData) {
         state.settings.farmName = sData.farm_name || state.settings.farmName;
@@ -445,7 +559,7 @@
     }
   }
 
-  // 4. Navigation Handling
+  // 5. Navigation Handling
   function setupNavigation() {
     const desktopTabs = document.querySelectorAll('.nav-tab-btn');
     const mobileTabs = document.querySelectorAll('.mobile-nav-btn');
@@ -497,7 +611,7 @@
     else if (state.activeTab === 'settings') renderSettings();
   }
 
-  // 5. Date Navigator
+  // 6. Date Navigator
   function setupDateNavigator() {
     const dateDisplay = document.getElementById('currentDateDisplay');
     const dateInput = document.getElementById('dateInputHidden');
@@ -548,7 +662,6 @@
     setDate(state.activeDate);
   }
 
-  // 6. Header & Stage Stats
   function updateHeaderStats() {
     const farmNameEl = document.getElementById('headerFarmName');
     if (farmNameEl) farmNameEl.textContent = state.settings.farmName || '토마토 농장';
@@ -2117,8 +2230,50 @@
     }
   }
 
-  // 13. Settings & Backup Module with Supabase Cloud Sync
+  // 13. Settings & PIN Change Module with Supabase Cloud Sync
   function setupSettingsModule() {
+    const btnChangePin = document.getElementById('btnChangePin');
+    if (btnChangePin) {
+      btnChangePin.addEventListener('click', async () => {
+        const curPinInput = document.getElementById('inputCurrentPin').value.trim();
+        const newPinInput = document.getElementById('inputNewPin').value.trim();
+        const actualCurPin = state.settings.pinCode || '123456';
+
+        if (curPinInput !== actualCurPin) {
+          alert('현재 PIN 비밀번호가 일치하지 않습니다.');
+          return;
+        }
+
+        if (!/^\d{6}$/.test(newPinInput)) {
+          alert('새로운 PIN 번호는 반드시 6자리 숫자여야 합니다.');
+          return;
+        }
+
+        state.settings.pinCode = newPinInput;
+        saveToStorage('tomato_settings', state.settings);
+
+        if (supabase) {
+          try {
+            await supabase.from('farm_settings').upsert({
+              id: 'default',
+              farm_name: state.settings.farmName,
+              bed_count: state.settings.bedCount,
+              target_supply_ec: state.settings.targetSupplyEc,
+              target_supply_ph: state.settings.targetSupplyPh,
+              target_drain_min: state.settings.targetDrainMin,
+              target_drain_max: state.settings.targetDrainMax,
+              weather_region: state.selectedRegionKey,
+              updated_at: new Date().toISOString()
+            });
+          } catch (e) {}
+        }
+
+        document.getElementById('inputCurrentPin').value = '';
+        document.getElementById('inputNewPin').value = '';
+        showToast('농장주 6자리 PIN 번호가 성공적으로 변경되었습니다!');
+      });
+    }
+
     const btnSaveSettings = document.getElementById('btnSaveFarmSettings');
     if (btnSaveSettings) {
       btnSaveSettings.addEventListener('click', async () => {
@@ -2188,7 +2343,7 @@
     if (btnExportJson) {
       btnExportJson.addEventListener('click', () => {
         const fullBackup = {
-          version: '2.0',
+          version: '2.1',
           exportedAt: new Date().toISOString(),
           settings: state.settings,
           selectedRegionKey: state.selectedRegionKey,
@@ -2269,6 +2424,7 @@
       btnResetAll.addEventListener('click', () => {
         if (confirm('⚠️ 경고: 모든 영농 기록 및 설정이 초기화됩니다. 계속하시겠습니까?')) {
           localStorage.clear();
+          sessionStorage.clear();
           state.settings = { ...DEFAULT_SETTINGS };
           state.selectedRegionKey = 'buyeo';
           state.growthProfile = { ...DEFAULT_GROWTH_PROFILE };
