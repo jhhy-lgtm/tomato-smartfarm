@@ -64,7 +64,13 @@
         { name: '중앙청과', avgPrice: 28400, volume: 5900, status: '경매마감', code: '03' },
         { name: '동화청과', avgPrice: 28200, volume: 4600, status: '경매마감', code: '04' },
         { name: '한국청과', avgPrice: 28500, volume: 3800, status: '경매마감', code: '05' }
-      ]
+      ],
+      trend7d: {
+        dates: ['9/3', '9/4', '9/5', '9/6', '9/7', '9/8', '9/9'],
+        special: [26500, 27000, 26800, 27500, 28000, 27000, 28500],
+        high: [22500, 23000, 22800, 23500, 23800, 23200, 24000],
+        normal: [17000, 17500, 17200, 18000, 18200, 17800, 18500]
+      }
     },
     tomato_10kg: {
       cropName: '완숙토마토 대과 (10kg)',
@@ -86,7 +92,13 @@
         { name: '중앙청과', avgPrice: 48800, volume: 1800, status: '경매마감', code: '03' },
         { name: '동화청과', avgPrice: 48600, volume: 1100, status: '경매마감', code: '04' },
         { name: '한국청과', avgPrice: 49200, volume: 800, status: '경매마감', code: '05' }
-      ]
+      ],
+      trend7d: {
+        dates: ['9/3', '9/4', '9/5', '9/6', '9/7', '9/8', '9/9'],
+        special: [46000, 47000, 46500, 48000, 48500, 47000, 49000],
+        high: [39000, 40000, 39500, 41000, 41500, 40000, 42000],
+        normal: [30000, 31000, 30500, 31500, 31800, 31000, 32000]
+      }
     },
     cherry_3kg: {
       cropName: '대추방울토마토 (3kg)',
@@ -108,7 +120,13 @@
         { name: '중앙청과', avgPrice: 23400, volume: 7600, status: '경매마감', code: '03' },
         { name: '동화청과', avgPrice: 23200, volume: 5800, status: '경매마감', code: '04' },
         { name: '한국청과', avgPrice: 23600, volume: 4400, status: '경매마감', code: '05' }
-      ]
+      ],
+      trend7d: {
+        dates: ['9/3', '9/4', '9/5', '9/6', '9/7', '9/8', '9/9'],
+        special: [24500, 24200, 24000, 23800, 24100, 24300, 23500],
+        high: [20500, 20300, 20100, 19900, 20200, 20400, 19800],
+        normal: [15000, 14800, 14700, 14600, 14800, 14900, 14500]
+      }
     },
     round_cherry_5kg: {
       cropName: '일반 방울토마토 (5kg)',
@@ -130,7 +148,13 @@
         { name: '중앙청과', avgPrice: 25800, volume: 2600, status: '경매마감', code: '03' },
         { name: '동화청과', avgPrice: 25700, volume: 1500, status: '경매마감', code: '04' },
         { name: '한국청과', avgPrice: 26100, volume: 1000, status: '경매마감', code: '05' }
-      ]
+      ],
+      trend7d: {
+        dates: ['9/3', '9/4', '9/5', '9/6', '9/7', '9/8', '9/9'],
+        special: [24800, 25000, 25200, 25500, 25800, 25000, 26000],
+        high: [20500, 20800, 21000, 21200, 21400, 20800, 21500],
+        normal: [15200, 15500, 15600, 15800, 15900, 15500, 16000]
+      }
     }
   };
 
@@ -725,9 +749,8 @@
   function setupAuctionModule() {
     const cropSelect = document.getElementById('selectAuctionCrop');
     const btnRefresh = document.getElementById('btnRefreshAuction');
-    const inputBoxes = document.getElementById('calcInputBoxes');
-    const selectGrade = document.getElementById('calcSelectGrade');
-    const btnCalc = document.getElementById('btnCalculateRevenue');
+    const btnGoLog = document.getElementById('btnGoToDailyLogFromAuction');
+    const btnGoAuction = document.getElementById('btnGoToAuctionFromLog');
 
     if (cropSelect) {
       cropSelect.addEventListener('change', (e) => {
@@ -740,22 +763,46 @@
       btnRefresh.addEventListener('click', () => {
         const icon = document.getElementById('auctionRefreshIcon');
         if (icon) icon.classList.add('animate-spin');
+
+        // Simulate live auction tick with realistic variation
+        const cropKey = state.auctionCrop || 'tomato_5kg';
+        const data = GARAK_AUCTION_DATA[cropKey];
+        if (data) {
+          const delta = (Math.random() > 0.4 ? 1 : -1) * (Math.floor(Math.random() * 3) + 1) * 500;
+          data.specialAvg = Math.max(10000, data.specialAvg + delta);
+          data.diff += delta;
+          data.diffPercent = Math.round((data.diff / (data.specialAvg - data.diff)) * 1000) / 10;
+        }
+
         setTimeout(() => {
           if (icon) icon.classList.remove('animate-spin');
           renderAuctionCard();
-          showToast('가락시장 실시간 경매 시세가 갱신되었습니다!');
-        }, 600);
+          showToast('가락시장 실시간 도매 경매 낙찰가가 갱신되었습니다!');
+        }, 500);
       });
     }
 
-    if (btnCalc) {
-      btnCalc.addEventListener('click', () => calculateAuctionRevenue());
+    if (btnGoLog) {
+      btnGoLog.addEventListener('click', () => {
+        switchTab('logs');
+        setTimeout(() => {
+          const harvestInput = document.getElementById('inputHarvestGradeA');
+          if (harvestInput) {
+            harvestInput.focus();
+            harvestInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 150);
+      });
     }
-    if (inputBoxes) {
-      inputBoxes.addEventListener('input', () => calculateAuctionRevenue());
-    }
-    if (selectGrade) {
-      selectGrade.addEventListener('change', () => calculateAuctionRevenue());
+
+    if (btnGoAuction) {
+      btnGoAuction.addEventListener('click', () => {
+        switchTab('routines');
+        setTimeout(() => {
+          const card = document.getElementById('garakAuctionCard');
+          if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 150);
+      });
     }
 
     renderAuctionCard();
@@ -765,10 +812,11 @@
     const cropKey = state.auctionCrop || 'tomato_5kg';
     const data = GARAK_AUCTION_DATA[cropKey] || GARAK_AUCTION_DATA.tomato_5kg;
 
-    // Banner sync
+    // 1. Banner Sync
     const bannerPrice = document.getElementById('bannerAuctionPrice');
     const bannerDiff = document.getElementById('bannerAuctionDiff');
     const bannerVolume = document.getElementById('bannerAuctionVolume');
+
     if (bannerPrice) bannerPrice.textContent = `${data.specialAvg.toLocaleString()}원`;
     if (bannerDiff) {
       const isUp = data.diff >= 0;
@@ -779,7 +827,7 @@
       bannerVolume.textContent = `${data.totalVolumeTon}톤 (${data.totalBoxes.toLocaleString()}상자)`;
     }
 
-    // 4 Grade Cards
+    // 2. 4 Grade Cards
     const elSpecial = document.getElementById('auctionGradeSpecialPrice');
     const elSpecialMax = document.getElementById('auctionGradeSpecialMax');
     const elHigh = document.getElementById('auctionGradeHighPrice');
@@ -798,55 +846,153 @@
     if (elLow) elLow.textContent = `${data.lowAvg.toLocaleString()}원`;
     if (elLowMin) elLowMin.textContent = `${data.lowMin.toLocaleString()}원`;
 
-    // Wholesale Corporation List
-    const corpContainer = document.getElementById('auctionCorpListContainer');
-    if (corpContainer) {
-      corpContainer.innerHTML = data.corps.map(corp => `
-        <div class="flex items-center justify-between p-2.5 bg-white rounded-lg border border-slate-200">
-          <div class="flex items-center gap-2">
-            <span class="w-6 h-6 rounded-md bg-amber-100 text-amber-800 text-[10px] font-black flex items-center justify-center">${corp.code}</span>
-            <span class="text-xs font-bold text-slate-800">${corp.name}</span>
-            <span class="text-[10px] text-slate-600 font-medium">(${corp.volume.toLocaleString()}상자)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-black text-rose-600">${corp.avgPrice.toLocaleString()}원</span>
-            <span class="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-bold">${corp.status}</span>
-          </div>
-        </div>
+    // 3. Wholesale Corporations Table Body
+    const corpTableBody = document.getElementById('auctionCorpTableBody');
+    if (corpTableBody && data.corps) {
+      corpTableBody.innerHTML = data.corps.map(corp => `
+        <tr class="hover:bg-slate-100/70 transition">
+          <td class="py-2.5 font-bold text-slate-900 flex items-center gap-2">
+            <span class="w-5 h-5 rounded-md bg-amber-100 text-amber-900 text-[10px] font-black flex items-center justify-center">${corp.code}</span>
+            <span>${corp.name}</span>
+          </td>
+          <td class="py-2.5 text-right font-black text-rose-600">${corp.avgPrice.toLocaleString()}원</td>
+          <td class="py-2.5 text-right text-slate-700 font-bold">${corp.volume.toLocaleString()}</td>
+          <td class="py-2.5 text-center">
+            <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">${corp.status}</span>
+          </td>
+        </tr>
       `).join('');
     }
 
+    // 4. Render 7-day Wholesale Price Trend Chart
+    renderAuctionTrendsChart(data);
+
+    // 5. Calculate Revenue linked with today's Harvest
     calculateAuctionRevenue();
+  }
+
+  function renderAuctionTrendsChart(data) {
+    const canvas = document.getElementById('chartAuctionTrends');
+    if (!canvas || !window.Chart || !data.trend7d) return;
+
+    if (state.charts.auctionTrends) {
+      state.charts.auctionTrends.destroy();
+    }
+
+    state.charts.auctionTrends = new window.Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: data.trend7d.dates,
+        datasets: [
+          {
+            label: '특품',
+            data: data.trend7d.special,
+            borderColor: '#e11d48',
+            backgroundColor: 'rgba(225, 29, 72, 0.08)',
+            fill: true,
+            tension: 0.35,
+            borderWidth: 2.5,
+            pointRadius: 3
+          },
+          {
+            label: '상품',
+            data: data.trend7d.high,
+            borderColor: '#d97706',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            borderWidth: 2,
+            pointRadius: 3
+          },
+          {
+            label: '보통',
+            data: data.trend7d.normal,
+            borderColor: '#0284c7',
+            backgroundColor: 'transparent',
+            tension: 0.35,
+            borderWidth: 2,
+            pointRadius: 3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            ticks: {
+              callback: (val) => `${(val / 1000).toFixed(0)}천원`
+            }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw.toLocaleString()}원`
+            }
+          }
+        }
+      }
+    });
   }
 
   function calculateAuctionRevenue() {
     const cropKey = state.auctionCrop || 'tomato_5kg';
     const data = GARAK_AUCTION_DATA[cropKey] || GARAK_AUCTION_DATA.tomato_5kg;
 
-    const inputBoxes = document.getElementById('calcInputBoxes');
-    const selectGrade = document.getElementById('calcSelectGrade');
-    const elGross = document.getElementById('calcGrossRevenue');
-    const elFee = document.getElementById('calcWholesaleFee');
-    const elBoxCost = document.getElementById('calcBoxCost');
-    const elNet = document.getElementById('calcNetProfit');
+    // Read harvest boxes from form input if available, else from state.dailyLogs
+    const inputGradeA = document.getElementById('inputHarvestGradeA');
+    const inputGradeB = document.getElementById('inputHarvestGradeB');
+    const currentLog = state.dailyLogs[state.currentDate] || {};
 
-    const boxes = parseInt(inputBoxes ? inputBoxes.value : 0, 10) || 0;
-    const grade = selectGrade ? selectGrade.value : 'special';
+    let boxA = 0;
+    let boxB = 0;
 
-    let unitPrice = data.specialAvg;
-    if (grade === 'high') unitPrice = data.highAvg;
-    else if (grade === 'normal') unitPrice = data.normalAvg;
-    else if (grade === 'low') unitPrice = data.lowAvg;
+    if (inputGradeA && inputGradeA.value !== '') {
+      boxA = parseInt(inputGradeA.value, 10) || 0;
+    } else if (currentLog.harvestGradeA !== undefined) {
+      boxA = parseInt(currentLog.harvestGradeA, 10) || 0;
+    }
 
-    const gross = boxes * unitPrice;
-    const fee = Math.round(gross * 0.05); // 5% wholesale corporation & market fee
-    const boxCost = boxes * 1500; // 1,500 KRW box packaging cost
-    const net = Math.max(0, gross - fee - boxCost);
+    if (inputGradeB && inputGradeB.value !== '') {
+      boxB = parseInt(inputGradeB.value, 10) || 0;
+    } else if (currentLog.harvestGradeB !== undefined) {
+      boxB = parseInt(currentLog.harvestGradeB, 10) || 0;
+    }
 
-    if (elGross) elGross.textContent = `${gross.toLocaleString()}원`;
-    if (elFee) elFee.textContent = `-${fee.toLocaleString()}원`;
-    if (elBoxCost) elBoxCost.textContent = `-${boxCost.toLocaleString()}원`;
-    if (elNet) elNet.textContent = `${net.toLocaleString()}원`;
+    const priceA = data.specialAvg;
+    const priceB = data.normalAvg;
+    const sumA = boxA * priceA;
+    const sumB = boxB * priceB;
+    const totalRevenue = sumA + sumB;
+
+    // Update Tab 1 (Auction Card Revenue Section)
+    const elGradeACount = document.getElementById('calcGradeACount');
+    const elGradeAPrice = document.getElementById('calcGradeAPrice');
+    const elGradeASum = document.getElementById('calcGradeASum');
+    const elGradeBCount = document.getElementById('calcGradeBCount');
+    const elGradeBPrice = document.getElementById('calcGradeBPrice');
+    const elGradeBSum = document.getElementById('calcGradeBSum');
+    const elTotalRev = document.getElementById('calcTotalEstimatedRevenue');
+
+    if (elGradeACount) elGradeACount.textContent = `${boxA}상자`;
+    if (elGradeAPrice) elGradeAPrice.textContent = `${priceA.toLocaleString()}원`;
+    if (elGradeASum) elGradeASum.textContent = `${sumA.toLocaleString()}원`;
+
+    if (elGradeBCount) elGradeBCount.textContent = `${boxB}상자`;
+    if (elGradeBPrice) elGradeBPrice.textContent = `${priceB.toLocaleString()}원`;
+    if (elGradeBSum) elGradeBSum.textContent = `${sumB.toLocaleString()}원`;
+
+    if (elTotalRev) elTotalRev.textContent = `${totalRevenue.toLocaleString()}원`;
+
+    // Update Tab 5 (Daily Log Live Revenue Banner)
+    const elLogRevVal = document.getElementById('displayHarvestRevenueValue');
+    const elLogRevA = document.getElementById('displayHarvestRevGradeA');
+    const elLogRevB = document.getElementById('displayHarvestRevGradeB');
+
+    if (elLogRevVal) elLogRevVal.textContent = `${totalRevenue.toLocaleString()}원`;
+    if (elLogRevA) elLogRevA.textContent = String(boxA);
+    if (elLogRevB) elLogRevB.textContent = String(boxB);
   }
 
   // ==========================================
@@ -1156,6 +1302,7 @@
     renderRoutines();
     renderDailyLogForm();
     evaluateGrowthStage();
+    calculateAuctionRevenue();
   }
 
   function updateHeaderSummary() {
@@ -2077,6 +2224,9 @@
     if (totalHarvestEl) {
       totalHarvestEl.textContent = `총 수확: ${totalKg.toLocaleString()} kg (특품 ${boxA}박스 + 보통 ${boxB}박스)`;
     }
+
+    // 🏛️ Real-time Garak Auction Revenue linkage
+    calculateAuctionRevenue();
   }
 
   function autoFillWeatherToLog() {
@@ -2150,6 +2300,7 @@
 
     updateHeaderSummary();
     renderLogHistory();
+    calculateAuctionRevenue();
     if (window.confetti) window.confetti({ particleCount: 40, spread: 50, origin: { y: 0.7 } });
     showToast(`${today} 영농일지가 안전하게 저장되었습니다!`);
   }
