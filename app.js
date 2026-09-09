@@ -562,20 +562,44 @@
     state.currentPinInput = '';
     renderPinDots();
 
+    // Keypad button click / pointerdown handling
+    const handleKeyAction = (btn) => {
+      if (!btn) return;
+      const key = btn.dataset.key;
+      const action = btn.dataset.action;
+
+      if (navigator.vibrate) {
+        try { navigator.vibrate(15); } catch (e) {}
+      }
+
+      if (key !== undefined) {
+        handlePinDigit(key);
+      } else if (action === 'clear') {
+        clearPinInput();
+      } else if (action === 'backspace') {
+        handlePinBackspace();
+      }
+    };
+
     if (keypad) {
       keypad.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
-        if (!btn) return;
-        const key = btn.dataset.key;
-        const action = btn.dataset.action;
+        if (btn) handleKeyAction(btn);
+      });
 
-        if (key !== undefined) {
-          handlePinDigit(key);
-        } else if (action === 'clear') {
-          clearPinInput();
-        } else if (action === 'backspace') {
-          handlePinBackspace();
-        }
+      // Individual button listeners for instant touch responsiveness
+      keypad.querySelectorAll('.pin-key-btn').forEach(btn => {
+        btn.addEventListener('pointerdown', () => {
+          btn.style.transform = 'scale(0.92)';
+          btn.style.backgroundColor = '#ffe4e6';
+        });
+        const resetBtnStyle = () => {
+          btn.style.transform = '';
+          btn.style.backgroundColor = '';
+        };
+        btn.addEventListener('pointerup', resetBtnStyle);
+        btn.addEventListener('pointerleave', resetBtnStyle);
+        btn.addEventListener('pointercancel', resetBtnStyle);
       });
     }
 
@@ -585,26 +609,33 @@
       });
     }
 
-    // Keyboard support for PIN
+    // Keyboard support for PIN (Top row & Numpad)
     window.addEventListener('keydown', (e) => {
       if (!state.isLocked) return;
       if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
         handlePinDigit(e.key);
       } else if (e.key === 'Backspace') {
+        e.preventDefault();
         handlePinBackspace();
-      } else if (e.key === 'Escape') {
+      } else if (e.key === 'Escape' || e.key === 'Delete') {
+        e.preventDefault();
         clearPinInput();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (state.currentPinInput.length === 6) verifyPin();
       }
     });
   }
 
   function handlePinDigit(digit) {
     if (state.currentPinInput.length >= 6) return;
-    state.currentPinInput += digit;
+    hidePinError();
+    state.currentPinInput += String(digit);
     renderPinDots();
 
     if (state.currentPinInput.length === 6) {
-      setTimeout(() => verifyPin(), 100);
+      setTimeout(() => verifyPin(), 120);
     }
   }
 
@@ -628,17 +659,19 @@
       const dot = document.getElementById(`dot${i}`);
       if (dot) {
         if (i < len) {
-          dot.classList.add('active');
+          dot.classList.add('filled', 'active');
         } else {
-          dot.classList.remove('active');
+          dot.classList.remove('filled', 'active');
         }
       }
     }
   }
 
   function verifyPin() {
-    const expectedPin = state.farmSettings.pinCode || '123456';
-    if (state.currentPinInput === expectedPin) {
+    const expectedPin = String(state.farmSettings.pinCode || '123456').trim();
+    const enteredPin = String(state.currentPinInput || '').trim();
+
+    if (enteredPin === expectedPin) {
       unlockApp();
     } else {
       showPinError();
@@ -673,11 +706,11 @@
     const container = document.getElementById('pinDotsContainer');
     if (errEl) errEl.classList.remove('hidden');
     if (container) {
-      container.classList.add('animate-shake');
+      container.classList.add('animate-shake', 'shake-animation');
       setTimeout(() => {
-        container.classList.remove('animate-shake');
+        container.classList.remove('animate-shake', 'shake-animation');
         clearPinInput();
-      }, 600);
+      }, 500);
     }
   }
 
@@ -2416,7 +2449,7 @@
         const cur = inputCurrentPin ? inputCurrentPin.value.trim() : '';
         const next = inputNewPin ? inputNewPin.value.trim() : '';
 
-        const expected = state.farmSettings.pinCode || '123456';
+        const expected = String(state.farmSettings.pinCode || '123456').trim();
         if (cur !== expected) {
           alert('현재 비밀번호가 일치하지 않습니다.');
           return;
