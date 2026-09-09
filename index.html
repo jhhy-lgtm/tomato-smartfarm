@@ -112,7 +112,7 @@
           <button id="btnPrevDate" class="p-1.5 hover:bg-white rounded-lg text-slate-600 transition-colors shadow-none hover:shadow-sm" title="이전 날짜"><i data-lucide="chevron-left" class="w-4 h-4"></i></button>
           <div class="relative px-2 flex items-center gap-1 cursor-pointer" id="dateDisplayContainer">
             <i data-lucide="calendar" class="w-3.5 h-3.5 text-brand-600"></i>
-            <span id="currentDateDisplay" class="text-xs font-bold text-slate-800">2026. 09. 01</span>
+            <span id="currentDateDisplay" class="text-xs font-bold text-slate-800">2026. 09. 09</span>
             <input type="date" id="dateInputHidden" class="absolute inset-0 opacity-0 cursor-pointer">
           </div>
           <button id="btnNextDate" class="p-1.5 hover:bg-white rounded-lg text-slate-600 transition-colors shadow-none hover:shadow-sm" title="다음 날짜"><i data-lucide="chevron-right" class="w-4 h-4"></i></button>
@@ -128,7 +128,7 @@
     <!-- Desktop Navigation Bar -->
     <nav class="hidden md:flex max-w-7xl mx-auto mt-3 pt-2 border-t border-slate-200 items-center justify-between">
       <div class="flex items-center gap-1 overflow-x-auto" id="desktopNavLinks">
-        <button data-tab="routines" class="nav-tab-btn active px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition bg-brand-600 text-white shadow-sm"><i data-lucide="check-square" class="w-4 h-4"></i> 오늘 할 일</button>
+        <button data-tab="routines" class="nav-tab-btn active px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition bg-brand-600 text-white shadow-sm"><i data-lucide="check-square" class="w-4 h-4"></i> 오늘 할 일 & 경매</button>
         <button data-tab="weather" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="cloud-sun" class="w-4 h-4 text-sky-500"></i> 실시간 농업기상</button>
         <button data-tab="scheduler" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="sprout" class="w-4 h-4 text-emerald-600"></i> 연간 생육 스케줄러</button>
         <button data-tab="beds" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="grid" class="w-4 h-4 text-purple-600"></i> 베드별 작업 관리</button>
@@ -142,8 +142,30 @@
       </div>
     </nav>
   </header>  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 pb-24 md:pb-8">
-    <!-- TAB 1: 오늘 할 일 & 루틴 체크 -->
+    <!-- TAB 1: 오늘 할 일 & 루틴 체크 & 서울시농수산식품공사 가락시장 경매 -->
     <section id="tab-routines" class="tab-pane active space-y-4">
+      
+      <!-- 🏛️ 서울시농수산식품공사 (가락시장) 실시간 경매 시세 요약 배너 -->
+      <div id="routineAuctionBanner" class="bg-gradient-to-r from-amber-50 via-orange-50/50 to-rose-50/60 border border-amber-300/80 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center text-xl flex-shrink-0 shadow-sm">🏛️</div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-black text-amber-900">서울시농수산식품공사 가락시장 실시간 경매</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-amber-200/90 text-amber-950 font-bold border border-amber-300" id="auctionBannerDate">오늘자 경락속보</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 animate-pulse">● 실시간 연동</span>
+            </div>
+            <p class="text-xs text-amber-900 mt-1 font-medium" id="auctionBannerText">
+              완숙토마토(5kg 상자) 특품 평균 <b class="text-rose-600 font-black text-sm" id="bannerAuctionPrice">28,500원</b> (<span class="text-rose-600 font-bold" id="bannerAuctionDiff">▲ 1,500원 +5.6%</span>) • 총 반입량: <span class="font-bold text-slate-800" id="bannerAuctionVolume">142.5톤 (28,500상자)</span>
+            </p>
+          </div>
+        </div>
+        <button id="btnScrollToAuctionCard" class="self-start sm:self-auto text-xs px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-xl shadow-sm transition flex items-center gap-1.5">
+          <i data-lucide="trending-up" class="w-3.5 h-3.5"></i>
+          <span>경매 시세·출하분석</span>
+        </button>
+      </div>
+
       <!-- Weather Alert / Smart Farm Advice Banner (Light Theme) -->
       <div id="routineWeatherBanner" class="bg-gradient-to-r from-sky-50 to-blue-50/60 border border-sky-200 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
         <div class="flex items-center gap-3">
@@ -180,7 +202,163 @@
         </button>
       </div>
 
-      <!-- Top Overview Card -->
+      <!-- 🍅 🏛️ GARAK MARKET LIVE AUCTION & REVENUE INSIGHT CARD -->
+      <div id="garakAuctionCard" class="bg-white p-4 sm:p-6 rounded-2xl border border-amber-200/90 shadow-sm space-y-5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-md bg-amber-100 text-amber-900 text-xs font-black border border-amber-300 flex items-center gap-1">
+                <span>🏛️ 서울시농수산식품공사</span>
+                <span class="text-slate-400">|</span>
+                <span>가락동 농수산물도매시장</span>
+              </span>
+              <span class="text-xs text-slate-500 font-medium" id="auctionLastUpdatedText">오늘 새벽 경매 집계</span>
+            </div>
+            <h3 class="text-lg sm:text-xl font-black text-slate-900 mt-1 flex items-center gap-2">
+              <span>토마토 도매시장 경매 시세 & 출하 정산 분석</span>
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">서울 가락시장 도매법인별 실시간 낙찰 단가를 확인하고 오늘 내 온실 출하 예상 매출을 계산합니다.</p>
+          </div>
+
+          <div class="flex items-center gap-2 self-start lg:self-auto flex-wrap">
+            <!-- Crop Selector -->
+            <select id="selectAuctionCrop" class="bg-amber-50/60 border border-amber-300 rounded-xl px-3 py-2 text-xs sm:text-sm font-black text-slate-900 focus:border-amber-500 focus:outline-none shadow-sm">
+              <option value="tomato_5kg">🍅 일반 완숙토마토 (5kg 상자)</option>
+              <option value="tomato_10kg">🍅 완숙토마토 대과 (10kg 상자)</option>
+              <option value="cherry_3kg">🍓 대추방울토마토 (3kg 상자)</option>
+              <option value="round_cherry_5kg">🍒 일반 방울토마토 (5kg 상자)</option>
+            </select>
+            <button id="btnRefreshAuction" class="px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-xs font-bold transition shadow-sm flex items-center gap-1" title="경매 시세 즉시 갱신">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5" id="auctionRefreshIcon"></i>
+              <span class="hidden sm:inline">시세 갱신</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 4 Grade Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+          <!-- Grade Special -->
+          <div class="bg-gradient-to-b from-rose-50/70 to-white p-3.5 rounded-xl border border-rose-200 text-center relative overflow-hidden shadow-sm">
+            <span class="text-[10px] uppercase tracking-wider text-rose-700 font-black block">🥇 특품 (상위 10%)</span>
+            <div class="text-xl sm:text-2xl font-black text-rose-600 mt-1" id="auctionGradeSpecialPrice">28,500원</div>
+            <div class="text-[11px] text-slate-500 font-semibold mt-0.5 flex items-center justify-center gap-1">
+              <span>최고</span> <b class="text-rose-700" id="auctionGradeSpecialMax">33,000원</b>
+            </div>
+          </div>
+
+          <!-- Grade High -->
+          <div class="bg-gradient-to-b from-amber-50/70 to-white p-3.5 rounded-xl border border-amber-200 text-center shadow-sm">
+            <span class="text-[10px] uppercase tracking-wider text-amber-800 font-black block">🥈 상품 (상위 40%)</span>
+            <div class="text-xl sm:text-2xl font-black text-amber-700 mt-1" id="auctionGradeHighPrice">24,000원</div>
+            <div class="text-[11px] text-slate-500 font-semibold mt-0.5 flex items-center justify-center gap-1">
+              <span>평균단가</span> <b class="text-amber-800" id="auctionGradeHighKg">4,800원/kg</b>
+            </div>
+          </div>
+
+          <!-- Grade Normal -->
+          <div class="bg-gradient-to-b from-sky-50/70 to-white p-3.5 rounded-xl border border-sky-200 text-center shadow-sm">
+            <span class="text-[10px] uppercase tracking-wider text-sky-800 font-black block">🥉 보통 (일반과)</span>
+            <div class="text-xl sm:text-2xl font-black text-sky-700 mt-1" id="auctionGradeNormalPrice">18,500원</div>
+            <div class="text-[11px] text-slate-500 font-semibold mt-0.5 flex items-center justify-center gap-1">
+              <span>평균단가</span> <b class="text-sky-800" id="auctionGradeNormalKg">3,700원/kg</b>
+            </div>
+          </div>
+
+          <!-- Grade Low / Processing -->
+          <div class="bg-gradient-to-b from-slate-50 to-white p-3.5 rounded-xl border border-slate-200 text-center shadow-sm">
+            <span class="text-[10px] uppercase tracking-wider text-slate-600 font-black block">📦 하품 / 가공과</span>
+            <div class="text-xl sm:text-2xl font-black text-slate-700 mt-1" id="auctionGradeLowPrice">11,000원</div>
+            <div class="text-[11px] text-slate-500 font-semibold mt-0.5 flex items-center justify-center gap-1">
+              <span>최저</span> <b class="text-slate-600" id="auctionGradeLowMin">8,500원</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wholesale Corporations & Real-time Revenue Estimation Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-1">
+          <!-- Left: 5 Major Wholesale Corporations in Garak Market (7 cols) -->
+          <div class="lg:col-span-7 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <i data-lucide="building-2" class="w-4 h-4 text-amber-600"></i> 가락시장 5대 도매법인별 낙찰 평균가
+              </span>
+              <span class="text-[10px] text-slate-500 font-bold">5kg 특품 기준</span>
+            </div>
+            
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs">
+                <thead>
+                  <tr class="text-[11px] text-slate-500 border-b border-slate-200 pb-1">
+                    <th class="py-1.5 font-bold">도매법인</th>
+                    <th class="py-1.5 font-bold text-right">평균 낙찰가</th>
+                    <th class="py-1.5 font-bold text-right">반입량 (상자)</th>
+                    <th class="py-1.5 font-bold text-center">경매상태</th>
+                  </tr>
+                </thead>
+                <tbody id="auctionCorpTableBody" class="divide-y divide-slate-200 font-medium">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Right: Farm Expected Revenue Calculator linked to Daily Harvest (5 cols) -->
+          <div class="lg:col-span-5 bg-gradient-to-br from-brand-50/70 via-rose-50/40 to-amber-50/50 p-4 rounded-xl border border-rose-200 space-y-3 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-black text-brand-900 flex items-center gap-1.5">
+                  <i data-lucide="calculator" class="w-4 h-4 text-brand-600"></i> 오늘 내 농장 출하 예상 정산액
+                </span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-brand-100 text-brand-800 font-bold border border-brand-200">일지 연동</span>
+              </div>
+              <p class="text-[11px] text-slate-600 mt-1 font-medium">
+                오늘 영농일지에 입력된 수확 상자 수와 가락시장 실시간 경락가를 곱해 산출합니다.
+              </p>
+            </div>
+
+            <div class="bg-white/90 backdrop-blur-sm p-3 rounded-xl border border-rose-200 space-y-2">
+              <div class="flex items-center justify-between text-xs text-slate-700 font-semibold">
+                <span>특품 수확: <b class="text-rose-700" id="calcGradeACount">0상자</b> × <span id="calcGradeAPrice">28,500원</span></span>
+                <span class="font-bold text-slate-900" id="calcGradeASum">0원</span>
+              </div>
+              <div class="flex items-center justify-between text-xs text-slate-700 font-semibold">
+                <span>보통 수확: <b class="text-amber-700" id="calcGradeBCount">0상자</b> × <span id="calcGradeBPrice">18,500원</span></span>
+                <span class="font-bold text-slate-900" id="calcGradeBSum">0원</span>
+              </div>
+              <div class="pt-2 border-t border-slate-200 flex items-center justify-between">
+                <span class="text-xs font-black text-slate-900">당일 예상 총 매출:</span>
+                <div class="text-right">
+                  <span class="text-base sm:text-lg font-black text-brand-600" id="calcTotalEstimatedRevenue">0원</span>
+                </div>
+              </div>
+            </div>
+
+            <button id="btnGoToDailyLogFromAuction" class="w-full py-2 bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center gap-1.5">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              <span>오늘 수확 상자 입력/수정하기</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 7-Day Auction Price Trend Chart -->
+        <div class="pt-2 border-t border-slate-200 space-y-2">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h4 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
+              <i data-lucide="line-chart" class="w-4 h-4 text-amber-500"></i> 최근 7일 가락시장 도매 경락가 추이 (원/5kg)
+            </h4>
+            <div class="flex items-center gap-3 text-[11px] text-slate-500 font-semibold">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> 특품</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 상품</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-sky-500"></span> 보통</span>
+            </div>
+          </div>
+          <div class="h-56 relative">
+            <canvas id="chartAuctionTrends"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Overview Card (Routines Progress) -->
       <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div class="space-y-1.5">
@@ -217,9 +395,7 @@
         </button>
       </div>
       <div id="routineListContainer" class="space-y-2.5"></div>
-    </section>
-
-    <!-- TAB 2: ⛅ 실시간 농업기상 & 처방 (White Light Theme) -->
+    </section>    <!-- TAB 2: ⛅ 실시간 농업기상 & 처방 (White Light Theme) -->
     <section id="tab-weather" class="tab-pane hidden space-y-4">
       <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -330,7 +506,9 @@
         </h3>
         <div id="weatherDailyCardsContainer" class="grid grid-cols-1 sm:grid-cols-3 gap-3"></div>
       </div>
-    </section>    <!-- TAB 3: 🌱 연간 생육 스케줄러 (농진청 표준 - Light Theme) -->
+    </section>
+
+    <!-- TAB 3: 🌱 연간 생육 스케줄러 (농진청 표준 - Light Theme) -->
     <section id="tab-scheduler" class="tab-pane hidden space-y-4">
       <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -457,7 +635,7 @@
               <span class="px-2 py-0.5 rounded-md bg-sky-100 text-sky-800 text-xs font-bold border border-sky-200">일일 영농 데이터</span>
               <h2 class="text-lg sm:text-xl font-bold text-slate-900">양액·환경 및 수확량 기록</h2>
             </div>
-            <p class="text-xs text-slate-500 mt-0.5">선택한 날짜(<span class="text-slate-800 font-bold" id="formCurrentDate">2026-09-01</span>)의 측정값과 수확량을 기록합니다.</p>
+            <p class="text-xs text-slate-500 mt-0.5">선택한 날짜(<span class="text-slate-800 font-bold" id="formCurrentDate">2026-09-09</span>)의 측정값과 수확량을 기록합니다.</p>
           </div>
           <div class="flex items-center gap-2">
             <button id="btnAutoFillWeather" class="px-3.5 py-2.5 bg-sky-50 hover:bg-sky-100 border border-sky-300 text-sky-800 text-xs font-bold rounded-xl flex items-center gap-1.5 transition shadow-sm" title="현재 지역 날씨 자동 입력">
