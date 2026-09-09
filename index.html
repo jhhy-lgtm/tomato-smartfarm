@@ -130,7 +130,7 @@
       <div class="flex items-center gap-1 overflow-x-auto" id="desktopNavLinks">
         <button data-tab="routines" class="nav-tab-btn active px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition bg-brand-600 text-white shadow-sm"><i data-lucide="check-square" class="w-4 h-4"></i> 오늘 할 일 & 경매</button>
         <button data-tab="weather" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="cloud-sun" class="w-4 h-4 text-sky-500"></i> 실시간 농업기상</button>
-        <button data-tab="scheduler" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="sprout" class="w-4 h-4 text-emerald-600"></i> 연간 생육 스케줄러</button>
+        <button data-tab="scheduler" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="sprout" class="w-4 h-4 text-emerald-600"></i> 생육 & 병해충 도감</button>
         <button data-tab="beds" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="grid" class="w-4 h-4 text-purple-600"></i> 베드별 작업 관리</button>
         <button data-tab="logs" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="flask-conical" class="w-4 h-4 text-sky-600"></i> 양액 & 수확 일지</button>
         <button data-tab="analytics" class="nav-tab-btn px-3.5 py-2 text-sm font-bold rounded-xl flex items-center gap-1.5 transition text-slate-600 hover:text-slate-900 hover:bg-slate-100"><i data-lucide="trending-up" class="w-4 h-4 text-amber-600"></i> 영농 통계 & 분석</button>
@@ -142,7 +142,7 @@
       </div>
     </nav>
   </header>  <main class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-5 pb-24 md:pb-8">
-    <!-- TAB 1: 오늘 할 일 & 루틴 체크 & 서울시농수산식품공사 가락시장 경매 -->
+    <!-- TAB 1: 오늘 할 일 & 루틴 체크 & 가락시장 경매 -->
     <section id="tab-routines" class="tab-pane active space-y-4">
       
       <!-- 🏛️ 서울시농수산식품공사 (가락시장) 실시간 경매 시세 요약 배너 -->
@@ -166,13 +166,34 @@
         </button>
       </div>
 
+      <!-- 🐛 RDA & 농업기술원 실시간 병해충 집중 예찰 경보 배너 -->
+      <div id="routinePestBanner" class="bg-gradient-to-r from-rose-50 via-red-50/40 to-orange-50/50 border border-rose-300 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center text-xl flex-shrink-0 shadow-sm" id="pestBannerIcon">🐛</div>
+          <div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-black text-rose-900">농진청·농업기술원 실시간 병해충 예찰 경보</span>
+              <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-200/90 text-rose-950 font-black border border-rose-300 animate-pulse" id="pestBannerLevel">🔥 집중 방제기</span>
+              <span class="text-[10px] text-slate-500 font-semibold" id="pestBannerStageTitle">DAT 25일차 위험 병해충</span>
+            </div>
+            <p class="text-xs text-rose-950 mt-1 font-medium" id="pestBannerText">
+              <b>[잎곰팡이병 & 담배가루이 경보]</b> 주야간 온습도차 및 개화기 곁순 상처 감염 주의. 황색 끈끈이트랩 밀도 확인 및 일출 전 결로 방지 환기 필수.
+            </p>
+          </div>
+        </div>
+        <button id="btnGoToPestTab" class="self-start sm:self-auto text-xs px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl shadow-sm transition flex items-center gap-1.5">
+          <i data-lucide="shield-alert" class="w-3.5 h-3.5"></i>
+          <span>병해충 도감/방제법</span>
+        </button>
+      </div>
+
       <!-- Weather Alert / Smart Farm Advice Banner (Light Theme) -->
       <div id="routineWeatherBanner" class="bg-gradient-to-r from-sky-50 to-blue-50/60 border border-sky-200 p-3.5 sm:p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
         <div class="flex items-center gap-3">
           <div class="w-10 h-10 rounded-xl bg-sky-100 text-sky-600 flex items-center justify-center text-xl flex-shrink-0 shadow-sm" id="routineWeatherEmoji">☀️</div>
           <div>
             <div class="flex items-center gap-2">
-              <span class="text-xs font-black text-sky-800" id="routineWeatherTitle">실시간 기상 맞춤 급액·환기 처방</span>
+              <span class="text-xs font-black text-sky-800">실시간 기상 맞춤 급액·환기 처방</span>
               <span class="text-[10px] px-2 py-0.5 rounded-full bg-sky-200/80 text-sky-900 font-bold border border-sky-300" id="routineWeatherRegion">충남 부여</span>
             </div>
             <p class="text-xs text-sky-900 mt-0.5 font-medium" id="routineWeatherAdviceText">현재 맑음(27℃), 일사량 양호. 1회 급액량 유지 및 일사비례 급액 횟수 증량 권장.</p>
@@ -221,7 +242,6 @@
           </div>
 
           <div class="flex items-center gap-2 self-start lg:self-auto flex-wrap">
-            <!-- Crop Selector -->
             <select id="selectAuctionCrop" class="bg-amber-50/60 border border-amber-300 rounded-xl px-3 py-2 text-xs sm:text-sm font-black text-slate-900 focus:border-amber-500 focus:outline-none shadow-sm">
               <option value="tomato_5kg">🍅 일반 완숙토마토 (5kg 상자)</option>
               <option value="tomato_10kg">🍅 완숙토마토 대과 (10kg 상자)</option>
@@ -237,7 +257,6 @@
 
         <!-- 4 Grade Cards -->
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
-          <!-- Grade Special -->
           <div class="bg-gradient-to-b from-rose-50/70 to-white p-3.5 rounded-xl border border-rose-200 text-center relative overflow-hidden shadow-sm">
             <span class="text-[10px] uppercase tracking-wider text-rose-700 font-black block">🥇 특품 (상위 10%)</span>
             <div class="text-xl sm:text-2xl font-black text-rose-600 mt-1" id="auctionGradeSpecialPrice">28,500원</div>
@@ -246,7 +265,6 @@
             </div>
           </div>
 
-          <!-- Grade High -->
           <div class="bg-gradient-to-b from-amber-50/70 to-white p-3.5 rounded-xl border border-amber-200 text-center shadow-sm">
             <span class="text-[10px] uppercase tracking-wider text-amber-800 font-black block">🥈 상품 (상위 40%)</span>
             <div class="text-xl sm:text-2xl font-black text-amber-700 mt-1" id="auctionGradeHighPrice">24,000원</div>
@@ -255,7 +273,6 @@
             </div>
           </div>
 
-          <!-- Grade Normal -->
           <div class="bg-gradient-to-b from-sky-50/70 to-white p-3.5 rounded-xl border border-sky-200 text-center shadow-sm">
             <span class="text-[10px] uppercase tracking-wider text-sky-800 font-black block">🥉 보통 (일반과)</span>
             <div class="text-xl sm:text-2xl font-black text-sky-700 mt-1" id="auctionGradeNormalPrice">18,500원</div>
@@ -264,7 +281,6 @@
             </div>
           </div>
 
-          <!-- Grade Low / Processing -->
           <div class="bg-gradient-to-b from-slate-50 to-white p-3.5 rounded-xl border border-slate-200 text-center shadow-sm">
             <span class="text-[10px] uppercase tracking-wider text-slate-600 font-black block">📦 하품 / 가공과</span>
             <div class="text-xl sm:text-2xl font-black text-slate-700 mt-1" id="auctionGradeLowPrice">11,000원</div>
@@ -274,9 +290,8 @@
           </div>
         </div>
 
-        <!-- Wholesale Corporations & Real-time Revenue Estimation Grid -->
+        <!-- Wholesale Corporations & Revenue Estimation Grid -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 pt-1">
-          <!-- Left: 5 Major Wholesale Corporations in Garak Market (7 cols) -->
           <div class="lg:col-span-7 bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -295,14 +310,11 @@
                     <th class="py-1.5 font-bold text-center">경매상태</th>
                   </tr>
                 </thead>
-                <tbody id="auctionCorpTableBody" class="divide-y divide-slate-200 font-medium">
-                  <!-- Dynamically populated -->
-                </tbody>
+                <tbody id="auctionCorpTableBody" class="divide-y divide-slate-200 font-medium"></tbody>
               </table>
             </div>
           </div>
 
-          <!-- Right: Farm Expected Revenue Calculator linked to Daily Harvest (5 cols) -->
           <div class="lg:col-span-5 bg-gradient-to-br from-brand-50/70 via-rose-50/40 to-amber-50/50 p-4 rounded-xl border border-rose-200 space-y-3 flex flex-col justify-between">
             <div>
               <div class="flex items-center justify-between">
@@ -340,7 +352,6 @@
           </div>
         </div>
 
-        <!-- 7-Day Auction Price Trend Chart -->
         <div class="pt-2 border-t border-slate-200 space-y-2">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <h4 class="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
@@ -508,8 +519,9 @@
       </div>
     </section>
 
-    <!-- TAB 3: 🌱 연간 생육 스케줄러 (농진청 표준 - Light Theme) -->
-    <section id="tab-scheduler" class="tab-pane hidden space-y-4">
+    <!-- TAB 3: 🌱 연간 생육 스케줄러 & 🐛 농진청 시기별 병해충 도감 (Light Theme) -->
+    <section id="tab-scheduler" class="tab-pane hidden space-y-5">
+      <!-- Top Growth Lifecycle Scheduler Card -->
       <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
@@ -561,6 +573,39 @@
           </div>
         </div>
       </div>
+
+      <!-- 🐛 🏛️ RDA & 농업기술원 시기별 병해충 스마트 도감 & IPM 종합 방제 센터 -->
+      <div class="bg-white p-4 sm:p-6 rounded-2xl border border-rose-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 rounded-md bg-rose-100 text-rose-800 text-xs font-black border border-rose-300 flex items-center gap-1">
+                <span>🐛 농진청 & 전국 농업기술원</span>
+                <span class="text-slate-400">|</span>
+                <span>스마트팜 병해충 예찰·IPM 표준</span>
+              </span>
+              <span class="text-xs text-slate-500 font-medium">시기별 발생 예측 & 친환경 처방</span>
+            </div>
+            <h3 class="text-base sm:text-xl font-black text-slate-900 mt-1 flex items-center gap-2">
+              <span>정식 후 시기별 병해충 발생 캘린더 & 종합 방제 도감</span>
+            </h3>
+            <p class="text-xs sm:text-sm text-slate-500 mt-0.5">정식일자(DAT) 및 기상 온습도에 맞춰 각 생육 단계별로 호발하는 핵심 병해충 12종의 조기 식별 요령과 방제법을 제공합니다.</p>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200 flex-wrap" id="pestFilterGroup">
+            <button data-pest-filter="all" class="pest-filter-btn active px-3 py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-white shadow-sm">전체 (12종)</button>
+            <button data-pest-filter="stage1" class="pest-filter-btn px-2.5 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">1기: 정식·활착기</button>
+            <button data-pest-filter="stage2" class="pest-filter-btn px-2.5 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">2기: 개화·착과기</button>
+            <button data-pest-filter="stage3" class="pest-filter-btn px-2.5 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">3기: 비대·수확기</button>
+            <button data-pest-filter="stage4" class="pest-filter-btn px-2.5 py-1.5 text-xs font-bold rounded-lg text-slate-600 hover:text-slate-900">4기: 후기·마무리</button>
+          </div>
+        </div>
+
+        <!-- Pest Cards Container -->
+        <div id="pestCardsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3.5"></div>
+      </div>
+
+      <!-- 7 RDA Roadmap Stages -->
       <div class="space-y-3">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
@@ -570,9 +615,7 @@
         </div>
         <div id="rdaStagesContainer" class="space-y-3.5"></div>
       </div>
-    </section>
-
-    <!-- TAB 4: 연동온실 베드별 작업 관리 (Light Theme) -->
+    </section>    <!-- TAB 4: 연동온실 베드별 작업 관리 (Light Theme) -->
     <section id="tab-beds" class="tab-pane hidden space-y-4">
       <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -626,7 +669,9 @@
         <span class="text-slate-400 text-[11px]">💡 베드 카드를 누르면 상태가 즉시 변경됩니다</span>
       </div>
       <div id="bedGridContainer" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"></div>
-    </section>    <!-- TAB 5: 양액 & 수확 일일 대시보드 (Light Theme) -->
+    </section>
+
+    <!-- TAB 5: 양액 & 수확 일일 대시보드 (Light Theme) -->
     <section id="tab-logs" class="tab-pane hidden space-y-4">
       <div class="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 pb-4">
@@ -706,13 +751,30 @@
           </div>
         </div>
         <div class="space-y-4 pt-2 border-t border-slate-200">
-          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="sun" class="w-4 h-4 text-amber-500"></i> 온실 환경 & 현장 특이사항 / 사진</h3>
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="sun" class="w-4 h-4 text-amber-500"></i> 온실 환경 & 병해충 예찰 메모 / 사진</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">주간 최고 기온 (°C)</label><input type="number" step="0.5" id="inputTempHigh" placeholder="28.5" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"></div>
             <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">야간 최저 기온 (°C)</label><input type="number" step="0.5" id="inputTempLow" placeholder="16.0" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"></div>
             <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">평균 습도 (%)</label><input type="number" step="1" id="inputHumidity" placeholder="75" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"></div>
             <div><label class="block text-[11px] font-semibold text-slate-600 mb-1">누적 일사량 (J/cm²)</label><input type="number" step="10" id="inputSolarRadiation" placeholder="1450" class="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-amber-500"></div>
           </div>
+          
+          <!-- Pest Quick Tag Helper -->
+          <div class="space-y-1.5 pt-1">
+            <span class="text-xs font-bold text-slate-700 flex items-center gap-1">
+              <i data-lucide="bug" class="w-3.5 h-3.5 text-rose-600"></i> 농진청 병해충 빠른 태그 입력 (클릭 시 메모에 자동 추가):
+            </span>
+            <div class="flex items-center gap-1.5 flex-wrap" id="pestQuickTagsContainer">
+              <button type="button" data-pest-tag="[온실가루이 미세발생]" class="btn-pest-tag px-2 py-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded-lg text-xs font-semibold border border-slate-200 transition">+ 온실가루이</button>
+              <button type="button" data-pest-tag="[담배가루이 예찰]" class="btn-pest-tag px-2 py-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded-lg text-xs font-semibold border border-slate-200 transition">+ 담배가루이</button>
+              <button type="button" data-pest-tag="[잎곰팡이병 초기반점]" class="btn-pest-tag px-2 py-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded-lg text-xs font-semibold border border-slate-200 transition">+ 잎곰팡이병</button>
+              <button type="button" data-pest-tag="[잿빛곰팡이병 발생의심]" class="btn-pest-tag px-2 py-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded-lg text-xs font-semibold border border-slate-200 transition">+ 잿빛곰팡이병</button>
+              <button type="button" data-pest-tag="[점박이응애 밀도관찰]" class="btn-pest-tag px-2 py-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded-lg text-xs font-semibold border border-slate-200 transition">+ 점박이응애</button>
+              <button type="button" data-pest-tag="[역병 방제실시]" class="btn-pest-tag px-2 py-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded-lg text-xs font-semibold border border-slate-200 transition">+ 역병</button>
+              <button type="button" data-pest-tag="[배꼽썩음과(칼슘결핍) 관찰]" class="btn-pest-tag px-2 py-1 bg-slate-100 hover:bg-rose-100 text-slate-700 hover:text-rose-700 rounded-lg text-xs font-semibold border border-slate-200 transition">+ 배꼽썩음과</button>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label class="block text-[11px] font-semibold text-slate-600 mb-1">병해충 예찰 및 영농 특이사항 메모</label>
@@ -739,9 +801,7 @@
         <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2"><i data-lucide="history" class="w-4 h-4 text-slate-600"></i> 최근 일일 영농일지 기록</h3>
         <div id="logHistoryListContainer" class="space-y-2.5"></div>
       </div>
-    </section>
-
-    <!-- TAB 6: 영농 통계 & 분석 차트 (Light Theme) -->
+    </section>    <!-- TAB 6: 영농 통계 & 분석 차트 (Light Theme) -->
     <section id="tab-analytics" class="tab-pane hidden space-y-4">
       <div class="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -890,7 +950,7 @@
     <div class="grid grid-cols-7 gap-0.5" id="mobileNavLinks">
       <button data-tab="routines" class="mobile-nav-btn active flex flex-col items-center justify-center py-1.5 rounded-xl text-brand-600 font-bold transition"><i data-lucide="check-square" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">루틴</span></button>
       <button data-tab="weather" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="cloud-sun" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">날씨</span></button>
-      <button data-tab="scheduler" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="sprout" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">스케줄</span></button>
+      <button data-tab="scheduler" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="sprout" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">생육·병충</span></button>
       <button data-tab="beds" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="grid" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">베드</span></button>
       <button data-tab="logs" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="flask-conical" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">양액</span></button>
       <button data-tab="analytics" class="mobile-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-slate-500 hover:text-slate-900 transition"><i data-lucide="trending-up" class="w-4 h-4"></i><span class="text-[8px] font-bold mt-0.5">통계</span></button>
